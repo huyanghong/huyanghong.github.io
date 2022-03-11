@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <link rel="manifest" href="/images/manifest.json">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"huyanghong.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":"flat"},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="这是我第一次主动写小说一直以来都很讨厌写东西，大概是因为上学的时候总被逼着写作文，久而久之，对写作也越来越排斥写这篇小说源于B站的科幻征文活动，主办方提供决赛期间的食宿交通，我掐指一算那个时候我正放高温假在家，决赛地和我工作地点一致，参加决赛可以报销机票，抱着白嫖一张B站机票的幻想，花了一天时间，在距离截至提交时间还有一个半小时的时候写完了小说。提交后审核没有通过，通知我违规，内容已被锁定。和客服">
+<meta property="og:type" content="article">
+<meta property="og:title" content="月球移植">
+<meta property="og:url" content="http://huyanghong.com/2021/07/16/%E6%9C%88%E7%90%83%E7%A7%BB%E6%A4%8D/index.html">
+<meta property="og:site_name" content="鱼香ROS">
+<meta property="og:description" content="这是我第一次主动写小说一直以来都很讨厌写东西，大概是因为上学的时候总被逼着写作文，久而久之，对写作也越来越排斥写这篇小说源于B站的科幻征文活动，主办方提供决赛期间的食宿交通，我掐指一算那个时候我正放高温假在家，决赛地和我工作地点一致，参加决赛可以报销机票，抱着白嫖一张B站机票的幻想，花了一天时间，在距离截至提交时间还有一个半小时的时候写完了小说。提交后审核没有通过，通知我违规，内容已被锁定。和客服">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-07-16T00:15:02.000Z">
+<meta property="article:modified_time" content="2022-03-11T09:21:09.014Z">
+<meta property="article:author" content="鱼香ROS">
+<meta property="article:tag" content="个人博客">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://huyanghong.com/2021/07/16/%E6%9C%88%E7%90%83%E7%A7%BB%E6%A4%8D/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>月球移植 | 鱼香ROS</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">鱼香ROS</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">CTRL-CV 缝合怪</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://huyanghong.com/2021/07/16/%E6%9C%88%E7%90%83%E7%A7%BB%E6%A4%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/child.jpg">
+      <meta itemprop="name" content="鱼香ROS">
+      <meta itemprop="description" content="毒鸡汤位置招租">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="鱼香ROS">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          月球移植
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%BE%AE%E5%B0%8F%E8%AF%B4/" itemprop="url" rel="index"><span itemprop="name">微小说</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/07/16/%E6%9C%88%E7%90%83%E7%A7%BB%E6%A4%8D/" class="post-meta-item leancloud_visitors" data-flag-title="月球移植" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2021/07/16/%E6%9C%88%E7%90%83%E7%A7%BB%E6%A4%8D/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/07/16/%E6%9C%88%E7%90%83%E7%A7%BB%E6%A4%8D/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>7.1k</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>这是我第一次主动写小说<br>一直以来都很讨厌写东西，大概是因为上学的时候总被逼着写作文，久而久之，对写作也越来越排斥<br>写这篇小说源于B站的科幻征文活动，主办方提供决赛期间的食宿交通，我掐指一算那个时候我正放高温假在家，决赛地和我工作地点一致，参加决赛可以报销机票，抱着白嫖一张B站机票的幻想，花了一天时间，在距离截至提交时间还有一个半小时的时候写完了小说。提交后审核没有通过，通知我违规，内容已被锁定。和客服沟通了好久，终于给我审核通过发布了文章，但过了一会儿又发了个通知说我的内容不符合规则，不允许参加此次评选活动。我猜测是我在小说里面写了一些讽刺的东西，所以审核不给我通过<br>本来是赶工出来的小说，里面有很多东西写得很简洁，不够丰富，结尾也是没时间了草草结尾，但也不改了，保留最原始的文字吧，记录被B站反白嫖的一天</p>
+<span id="more"></span>
+
+
+<p>    在前往拜科努尔航天发射场的航班上，我正直勾勾地望着窗外。从上中学起，我就一直很享受路途中面向窗外发呆的时光，这种状态下的我，没有压力、没有束缚、也没有烦恼，不用在意世俗眼光，不用理会伦理道德。然而这次我却不再如往日一样轻松自在，尽管此时飞机已处于平流层，我却无法透过舷窗看见大地，也看不见白云，映入眼帘的是灰蒙蒙的一片。大地被阻挡在灰色之下，太阳也披上了灰色的面纱，隐藏在雾中，只望见一个淡影 </p>
+<p>    这一切，起源于一周前的激烈地质运动。</p>
+<p>    2099年12月31日，当全世界都在为迎接世纪跨年的到来而疯狂庆祝的时候，亚欧板块与印度洋板块也在此时发生激烈碰撞，在中国、尼泊尔、印度等地同时引发了里氏15级以上的特大地震，顷刻间，房屋倒塌、山石滚落、水库决堤。孟加拉湾掀起的海啸淹没了新加坡与马来西亚，甚至到达了澳大利亚北海岸，全球范围内都感受到了强烈的震感。而比这些更糟糕的是，持续几天的大地震在短时间内将青藏高原的海拔抬升了数百米。在亚欧板块与印度洋板块强烈地碰撞，以及青藏高原巨大的重量双重作用下，地壳发生了断裂。断裂带东起西藏林芝市，西至印度、尼泊尔交界处，南至孟加拉国境内，形成一块边长约一千公里的勒洛三角形断裂区域，三角形区域内又破裂成几块，正缓缓向地幔中下沉。炙热的熔岩从断裂带缝隙中不断喷出，在青藏高原上形成了一个几千公里长的带状火山群。</p>
+<p>    全球范围内的大部分火山也在地震影响下开始大规模喷发，熔岩被喷射到上千米高空，较细的火山灰形成高耸的对流羽状物，像极了核爆炸时的蘑菇云。在最严重的东南亚、中国、印度地区，黑云的厚度达到了几千米，阳光也无法完全穿透黑云，大地笼罩在一片黑暗之下，只有在万米高空中才可见一丝光亮。</p>
+<p>    专家预测，破裂的地壳将在一个月后完全沉入地幔之中，到那时将会在地球上形成一个直径一千多公里的超级火山，而要经过上百年，洞口才会慢慢冷却凝固成为新的陆地，在此之前，巨大的熔岩火海会加速水分蒸发，与大量火山灰相融和，将地球紧紧包围。太阳也将对地球加热，届时地球将成为一个巨大的“地球蒸笼”，将不再适合人类生存。</p>
+<p>    联合国紧急组织了众多科学家进行了远程全息会议，大会会场上，联合国秘书长诸葛象牙率先发言：</p>
+<p>    “现在大会正式开始，出席本次大会的有，中国驻联合国代表王多鱼先生，俄罗斯驻联合国代表梅得勇诺夫先生、法国驻联合国代表达文基先生、英国驻联合国代表诺塞尔腐先生、美属阿拉斯加驻联合国代表唐纳德离普先生，以及其他各国驻联合国代表，让我们欢迎各位代表参加此次会议。”</p>
+<p>    诸葛象牙稍作停顿，看了一眼无人鼓掌的虚拟会场，咽了口唾沫后继续说道：</p>
+<p>    “同时也欢迎各国科学家参加本次会议，正如大家所知，我们的地球正遭遇一场灭顶之灾，青藏高原正在沦陷，人类文明的延续遇到了史上最强挑战，如果不能取得这次地球保卫战的胜利，我们人类700万年的光辉历史将化为乌有，地球上最伟大的物种、宇宙中最璀璨的文明将不复存在！我们联合国各代表已于昨日紧急召开研讨会，大会表决通过了地球自救的方案，即“割月补地”计划。”</p>
+<p>    见诸葛象牙终于说到了关键点，科学家们松开了一直紧握的双拳，脸上的表情也由焦急变成了严肃。</p>
+<p>    诸葛象牙继续说道：</p>
+<p>    “计划分为三部分。第一步从月球上切割出一块大小与地球漏洞差不多岩石补丁，第二步，将切割出来的补丁运输到地球，第三步，将补丁放入缺口中，完成缺口修补。你们都是世界上最精英的科学家，现在只需要你们来完善计划中的细节，并制定出施工方案，情况紧急，我们只有一个月左右，请抓紧时间，现在你们可以发表建议了。”</p>
+<p>    说完按了一下面前的按键，解除了参会者的禁言设置</p>
+<p>    科学家们面面相觑，他们原以为大会的目的是制定地球拯救方案，没想到却是让他们制定已有方案的执行计划，并且是一个如此疯狂的计划。短暂的沉默之后，一位大胡子科学家愤怒说道：</p>
+<p>    “你们的方案没有经过科学论证，也没有条件调研，没有征求科学界意见，怎么可以如此草率拍板定案”</p>
+<p>    “我觉得在理，当务之急是先往月球运送移民，保住人类文明的种子”，另一位科学家应和到</p>
+<p>    接着，会议上充斥着科学家们反对的声音，都在争先恐后地发表自己的意见，已完全听不清说话的内容，持续了一会儿后，发言人又打开了禁言设置，说道：</p>
+<p>    “都别吵了，你们这些科学家都是知识分子，吵来吵去成何体统，我们容忍知识分子的脾气，但不是没有限度，吵架也要分场合，现在是地球最危急的时候，我们正面临着最大的挑战，我们要万众一心、争分夺秒、克服灾难，现在每浪费一秒钟人类就多一份危险，你们的每一句话都是在消耗我们的宝贵时间，可能就会使最后的自救计划仅仅因为差一秒钟而失败。我们制定的方案是经过各国代表严格论证过的，各国的代表都是每个国家精心选拔出来的，最优秀的人选，相信在他们的带领下我们一定可以取得这次地球保卫战的胜利。我们也不是没有想过移民月球，但是月球基地现在只能提供一千万人的生存环境，而且大地震已经摧毁了地球的大部分发射基地与发射设施，短时间内无法修复，我们目前送一千万人上月球的能力都已经不具备，移民月球意味着我们将放弃地球上的一百多亿公民，只有几百万人能够活下来，这是绝对不允许的，我们不能放弃任何一个人。我们也清楚“割月补地”计划一旦执行，现存的地月运载能力将全部用于物料运输，无法再承担人类月球移民，如果方案失败，幸存人类将不足百万。但是我们对“割月补地”有信心，全世界人民都将活下来。最后提醒你们一点，请你们来参加会议是来提建议的，不是来提意见的，谁再捣乱那就请退出会议。”</p>
+<p>    说罢，诸葛象牙将刚才言辞最激烈的几位科学家踢出了会议。随后有一部分科学家主动退出了会议。</p>
+<p>    诸葛象牙扫视了一圈参会人员说：</p>
+<p>    “危机到来之时，强权即公理！现在可以开始计划讨论了吧”</p>
+<p> </p>
+<p>    大会确定了来自中国的著名科学家杨大伟为总指挥。</p>
+<p>    杨大伟年少成名，15岁时参加中考取得了六门总分599分，五门满分一门99分的优秀成绩，然后破格参加了当年高考，轻松考取了世界top2的名校西北工业大学，被人称为2050年后第一个神童。</p>
+<p>    神童一词曾经在21世纪初被广泛应用，在那个年代，天才多如狗神童遍地走，会背圆周率可以称为神童，会速算也能称为神童，最后人们发现，这些神童长大后全都泯然众人矣，神童成为了笑话。于是大约2020年之后，神童便慢慢成为了一个侮辱性的词了，都怕自家孩子被人冠以神童的称号。</p>
+<p>    西北工业大学曾经只是一所普通大学，直到2030年中美大战后才跻身世界一流大学。</p>
+<p>    2030年，由于中国的强势崛起，威胁到美国的霸主地位，美国总统唐纳德建国以中国危害美国国家安全为由对中国宣战，喊出一个月消灭中国的狂言。结果开战仅仅三天，中国就打败了美国。</p>
+<p>    中国用苍穹系统拦截了美军导弹，东风导弹直接炸到美国本土，空间礼炮轻松摧毁制导系统，量子干扰切断了通信链路……</p>
+<p>    中国用一个个未曾公开的武器轻松战胜美国。美国总统唐纳德建国狗急跳墙发动了核战争，结果却是全部被拦截在美国本土。</p>
+<p>    中国震惊了世界，谁也没想到中国如此深藏不露，本以为是势均力敌的战争，却是大人打小朋友。战争过后，中国公开了武器与背后的研发人员，授予了多人共和国勋章。人们发现参与到研发的人员中，绝大部分都来自西北工业大学和哈尔滨工业大学，两所学校为国防事业立下汗马功劳。而在此之前，这两所学校由于缺少赚钱多的金融、商务、法学等专业，一直被其他同规格的大学看不起，调侃他们为“西哈二人组”。经此战役后，才让他们意识到他们所谓的赚钱多，都是建立在别人的保护伞之下的，曾经被调倘的“西哈二人组”也变成了“中国有西哈”，越来越多的学生投身工业领域，优质生源越来越多，仅仅过了几年就成为世界最好的top2大学，世界学术中心。</p>
+<p>    美国战败后，本土核辐射超标，幸存人员全部被转移到阿拉斯加地区，保留联合国五大常任理事国席位，剥夺了一票否决权。经济上一落千丈，军事上，也被限制为只能组建自卫军。</p>
+<p>    杨大伟从西北工业大学毕业后，主导建设了“千里眼”工程。通过在月球表面安装反射镜，以整个月球为载体，建成了世界上最大规模的射电望远镜，用于探索宇宙奥秘。因为“割月补地”计划需要用到“千里眼”，所以杨大伟也顺理成章被推举为总指挥。</p>
+<p> </p>
+<p>    “哔哔哔…..”</p>
+<p>    一声哨响，领队将航班上的所有人目光都集中在了他身上，扫视了一圈后对我们说：<br>“刚刚得到通知，“割月补地”计划执行细节已经全部确定，现在连线总指挥，由他向我们介绍任务，事关重要，请认真听清每一句话”</p>
+<p>    说完打开了全息会议系统，一个头发油亮黑眼圈厚重的人出现在屏幕中，看得出来他很疲惫，但也在强打着精神，不让我们看出他的疲态，这个人就是“割月补地”计划的总指挥杨大伟，曾经就是他带领着我们在月球上建设了“千里眼”工程。这时，杨大伟说话了：</p>
+<p>    “你们现在应该是很迷茫，不知道为什么就上了飞机，也不知道要去什么地方，去做什么。我现在可以告诉你们，我们要去做一件伟大的事，拯救全人类的事情，之前没有告诉你们，是因为我们的技术细节还没有完成，为了赶时间，先让你们搭乘飞机去往航天发射中心，现在技术细节已经确定完成，由我向大家介绍“割月补地”计划。每个小队的资料稍后将发送到你们领队手中…..”</p>
+<p>    半小时后，杨大伟讲述完了“割月补地”计划，其核心流程分为六步：</p>
+<ul>
+<li><p>通过调整“千里眼”的反射镜，让微波辐射在反射镜之间连续反射，最后形成一个锥形的反射链路，届时，整个月球将成为一个巨大的“微波相对论引擎”，通过调控微波出口可以获得任意方向的加速度。</p>
+</li>
+<li><p>通过“微波相对论引擎”使月球减速，慢慢靠近地球。</p>
+</li>
+<li><p>当月球到达地月洛希极限点时，依靠地球引力将月球“切割”成两部分。</p>
+</li>
+<li><p>“微波相对论引擎”将其中一部分月球主体加速推离地球，重新回到月球轨道。</p>
+</li>
+<li><p>另一部分月球在发动机作用下，下降到地面与青藏高原上的地球缺口对接。</p>
+</li>
+<li><p>岩浆从四周溢出并冷却，将地球与月球“焊接”在一起完成“割月补地”计划。</p>
+</li>
+</ul>
+<p>    我们所有人被分成了1000个小队，每个小队任务不相同，每个小队都由10名工程师带领300名军人完成指定任务，因为我曾经参与过“千里眼”工程的建设工作，所以被分配到维修组作为小队工程师之一。我们小队接到的任务是维修月球上亚平宁山脉附近受损的反射镜，确保每块反射镜都能正常控制。除了维修组以外，其他的三个小组则分别是负责炸出应力集中点的爆破组，负责“捆绑”月球的捆绑组，以及负责产生引擎驱动力的湮灭组。</p>
+<p>    看完资料后，飞机也正好到达了拜科努尔航天发射场，这里是世界第一座、也是规模最大的空间发射中心，第一颗人造地球卫星从这里发射入轨，航天员加加林也是在这里乘坐第一艘载人飞船东方号踏上了人类历史上第一次载人飞行的征程，这里有太多人类飞天的第一次。美国在中美大战战败后退缩阿拉斯加，经济与军事实力遭到重创，世界上就只有中国和俄罗斯有能力建设万吨级负载航天发射中心，而中国的海南航天发射中心在地震中被海啸摧毁，由于远离地震中心地带，拜科努尔航天发射场受损不严重，受损部分也很快修好，目前是地球上唯一的地月运载中心。曾经的它实现了人类航天的梦想，如今又要承担着地球的和人类的命运。</p>
+<p>    下了飞机后，我们马不停蹄登上了前往月球的飞船，经过五个小时的飞行顺利到达了月球。这时候的月球，表面大部分区域都覆盖上了一米长一米宽的反射镜，通过两米多高的万向球形节支撑在月球表面，方向可以任意调节，像极了地球上的光伏发电站。反射镜透光率与反射率也可以任意设置，当反射率设置为0%的时候，在地球上就不能看到月亮了，而当反射率设置为100%，就能看到一个如太阳般明亮的月球。当然，这么大的“千里眼”工程当然可不是用来供人们赏月的，而是用来研究宇宙。七年前，我们这些建设者无论如何也想象不到，他竟然还能通过控制每一片反射镜，变成一个“微波相对论引擎”，还能在地球保卫战中发挥如此重要的作用。</p>
+<p>    根据领取到的地图资料，我们前往有故障的反射镜处维修，由于反射镜数量众多，达到了惊人的35亿，所以坏掉的反射镜也不少，我们1000支队伍中有超过一半的队伍是做反射镜维修的，被分配到了不同的区域，覆盖整个月球。</p>
+<p>    正当我们紧张维修时，突然月球上传来一阵强烈的震动。不久前才在地球经历了大地震，尚且心有余悸，但我们都知道刚刚发生的不是地震，而是爆破组的队友在执行任务。</p>
+<p>    在整个“割月补地”计划当中，当月球到达地月洛希极限点时，依靠地球引力将月球“切割”成两部分，但是这个“切割”过程却不可控，很可能切出部分太大或者太小，那都将使我们的努力化为泡影。因此，爆破组的工作便是在月球上选出一个直径1500公里的圆圈，围着圆圈安装炸弹，通过爆破在月球上炸出一个直径1500公里的圆形裂谷，形成应力集中点，地球引力在撕破月球的时候就有了着力点，会顺着圆圈将月球切成两半，刚刚的地震便是连续爆破产生的震动。</p>
+<p>     爆炸发生后不久，我们就遇到了捆绑组的队员，他们驾驶着低空飞行器，向地面喷洒着一种“涂料”，实际上“涂料”是由夸克组成的粒子流，夸克被喷射到月球表面后相互之间通过强相互作用力连接，在月球表面形成两张由强相互作用力连接的网，两张网的边界就是爆破组炸出的直径1500公里的圆形大裂谷，一大一小分别包裹着月球的大小两部分，一方面防止地球引力撕破月球时变成小碎片，另一方面也将反射镜产生的推力分摊到月球表面，防止反射镜支架受力陷入地下。最后，轮到湮灭组上场了，他们的职责是将反物质微波发生器安装在月球表面，用以补偿宇宙微波辐射。“微波相对论引擎”的驱动力来自微波辐射，仅仅从宇宙中获取微波辐射不足以驱动月球，反物质微波发生器就是用来为引擎提供足够大的驱动力的，其原理是介子与其反粒子相遇会彼此湮灭，从而释放出微波辐射，由反射镜捕捉到这些微波辐射，进行定向反射，形成反推力。</p>
+<p>     经过两天时间的连续作业，我们完成了在月球上的所有准备工作，月球，即将启航。</p>
+<p>     月球控制中心接到指令，开始控制反射镜向“微波相对论引擎”模式变形，大量的微波辐射在每一块反射镜中进行中全反射，画出一个锥形轨迹，从一个矢量喷管射出，月球在反推力的作用下，开始减速并被地球引力吸引。</p>
+<p>    38万公里，30万公里，25万公里……</p>
+<p>    在地球引力的驱动下，月球离地球越来越近</p>
+<p>    经过二十天的漫长航行，终于距离地球只有1万公里。此时的地球上的人类，看见的月亮不再是小小的“白玉盘”，而是像是一座大山压在头顶，庞大的体积在上空压得人们喘不过气，让许多巨物恐惧症患者接近崩溃自杀，不安的气息也在人群中散播开来。事实上，不安的情绪早已存在，当我们登上月球的那一刻，地球上的人群便开始向玻利维亚高原聚集。</p>
+<p>    当月球快速与地球靠近的同时，潮汐力也在不断变化，巨大的潮汐力在地球上掀起了几百米高的巨浪，淹没了地球上一半的城市，科学家也计算出了这样的结果，早已将幸存人类向玻利维亚高原聚集。虽然地球的航天发射中心在之前大地震中几乎被被摧毁殆尽，但是地面低空交通运输受到的影响却不大，甚至有人在地震发生时开着私人飞机到空中避难，所以目前除了玻利维亚高原，地球上的其他地方早已没有了人类的踪影。</p>
+<p>    哪里有人群聚集哪里就会有骚乱，半个多月以来，玻利维亚高原上争夺帐篷、食物和水等引发的骚乱时有发生，甚至有人觉得食物分配不均开始带头抢夺政府驻地资源，残害同胞夺取资源。</p>
+<p>    暂且搁下人群不管，当下最重要的还是月球，目前月球已经处在洛希极限点附近，开始以很慢的速度向地球靠近，终于，在距离地球9000公里的地方，月球开始裂开了，和计划中的一样，月球从直径1500公里的大裂谷开始一点点裂开，部分残渣开始脱离月球表面，落入地球形成流星雨。经过漫长的半小时，月球被地球切割成两块，还没有结束，“微波相对论引擎”开始反向加速了，马力全开，将缺了一部分的月球主体加速推离了地球，越飞越远，我们负责在月球上执行任务的人，也跟着越飞越远，而另一部分则将留在地球上。在推离月球主体的时候，从月球上分离出的部分小月球早已调整好反射镜朝向，形成一个小的“微波相对论引擎”，开始向地面下落，最终又经过半天时间的漫长等待，在破碎的地壳完全沉入地幔之前，小月球稳稳落在青藏高原的缺口之上，圆弧状的月球表面嵌入到了缺口之中，四周向上翘起，顶部则是一个面积达到176万平方公里大平原，就像给地球盖上了锅盖，十分滑稽。地球上的人开始狂欢，地球保卫计划成功了。</p>
+<p>    一切都太顺利了，顺利得让人不安。</p>
+<p>    仅仅过了一天，出事儿了，地壳又被压塌了。</p>
+<p>    月球的巨大重量，再次将脆弱的地壳压破，慢慢向地幔中沉去，一切又回到了原点，甚至更为糟糕，现在的地球，已经彻底失去了航天发射的能力。</p>
+<p>    不知道联合国的强权，又会想出什么样的办法来。</p>
+<p>    为什么就没有人提前想到，原本就破裂的地壳，怎么会承受的住比原先破裂前更重的月球呢。</p>
+<p>    而在留在月球本体上的三十多万人，又将驾驶月球去往哪里？</p>
+<p>    回到原来的月球轨道？</p>
+<p>    寻找新的家园？</p>
+<p>    还是，回到地球？</p>
+
+    </div>
+
+    
+    
+    
+        <div class="reward-container">
+  <div></div>
+  <button onclick="var qr = document.getElementById('qr'); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/wechatpay.jpg" alt="鱼香ROS 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/alipay.jpg" alt="鱼香ROS 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2/" rel="tag"># 个人博客</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/07/15/%E6%96%87%E4%BB%B6%E8%BD%AC%E6%95%B0%E7%BB%84%E7%A8%8B%E5%BA%8F/" rel="prev" title="文件转数组程序">
+      <i class="fa fa-chevron-left"></i> 文件转数组程序
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/08/27/CUBEIDE%E9%85%8D%E7%BD%AESTM32%E4%B8%B2%E5%8F%A3%E5%8F%8A%E8%A7%A3%E5%86%B3%E4%B8%B2%E5%8F%A3%E6%AD%BB%E9%94%81%E9%97%AE%E9%A2%98/" rel="next" title="CUBEIDE配置STM32串口及解决串口死锁问题">
+      CUBEIDE配置STM32串口及解决串口死锁问题 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+
+<iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86 src="//music.163.com/outchain/player?type=2&id=4877915&auto=1&height=66"></iframe>
+
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="鱼香ROS"
+      src="/images/child.jpg">
+  <p class="site-author-name" itemprop="name">鱼香ROS</p>
+  <div class="site-description" itemprop="description">毒鸡汤位置招租</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/huyanghong" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;huyanghong" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tajor.hu@gmail.com" title="E-Mail → mailto:tajor.hu@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll motion-element">
+    <div class="links-of-blogroll-title"><i class="fa fa-link fa-fw"></i>
+      相关连接
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="http://github.com/huyanghong" title="http:&#x2F;&#x2F;github.com&#x2F;huyanghong" rel="noopener" target="_blank">GitHub</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://huyanghong.com/" title="http:&#x2F;&#x2F;huyanghong.com&#x2F;">博 客</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://space.bilibili.com/414497501/" title="https:&#x2F;&#x2F;space.bilibili.com&#x2F;414497501&#x2F;" rel="noopener" target="_blank">B  站</a>
+        </li>
+    </ul>
+  </div>
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">鱼香ROS</span>
+</div>
+
+<!--
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+-->
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'zhvB0i2lb4gKEQ4cCAF1ASnR-gzGzoHsz',
+      appKey     : 'S78bTbGXf4wnNyoKiag8QApQ',
+      placeholder: "不喷几句再走？？？",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : true,
+      serverURLs : ''
+    });	
+
+
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

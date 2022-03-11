@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>CUBEIDE配置STM32串口及解决串口死锁问题</title>
+    <url>/2021/08/27/CUBEIDE%E9%85%8D%E7%BD%AESTM32%E4%B8%B2%E5%8F%A3%E5%8F%8A%E8%A7%A3%E5%86%B3%E4%B8%B2%E5%8F%A3%E6%AD%BB%E9%94%81%E9%97%AE%E9%A2%98/</url>
+    <content><![CDATA[<p>生成串口代码的教程很多，也很简单，这里不做赘述<br>这里主要介绍一下printf重定向的方法，以及HAL_UART_Transmit和HAL_UART_Receive_IT函数导致的串口死锁问题</p>
+<span id="more"></span>
+
+<h2 id="串口单字节发送函数"><a href="#串口单字节发送函数" class="headerlink" title="串口单字节发送函数"></a>串口单字节发送函数</h2><p>在usart.c中增加串口发送函数，方便后续开发，并能很好解决死锁问题</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">void uart4SendByte(uint8_t ch)</span><br><span class="line">&#123;</span><br><span class="line">	while((UART4-&gt;ISR&amp;0X40) == 0);</span><br><span class="line">	UART4-&gt;TDR = (uint8_t)ch;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="printf重定向"><a href="#printf重定向" class="headerlink" title="printf重定向"></a>printf重定向</h2><p>只需要在工程任意位置加入以下代码即可</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#ifdef __GNUC__</span><br><span class="line">  /* With GCC/RAISONANCE, small printf (option LD Linker-&gt;Libraries-&gt;Small printf</span><br><span class="line">     set to &#x27;Yes&#x27;) calls __io_putchar() */</span><br><span class="line">  #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)</span><br><span class="line">#else</span><br><span class="line">  #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)</span><br><span class="line">#endif /* __GNUC__ */</span><br><span class="line">/**</span><br><span class="line">  * @brief  Retargets the C library printf function to the USART.</span><br><span class="line">  * @param  None</span><br><span class="line">  * @retval None</span><br><span class="line">  */</span><br><span class="line">PUTCHAR_PROTOTYPE</span><br><span class="line">&#123;</span><br><span class="line">  /* Place your implementation of fputc here */</span><br><span class="line">  /* e.g. write a character to the EVAL_COM1 and Loop until the end of transmission */</span><br><span class="line">  //HAL_UART_Transmit(&amp;huart4, (uint8_t *)&amp;ch, 1, 0xFFFF);</span><br><span class="line">	uart4SendByte(ch); //与HAL_UART_Transmit取其中一个即可</span><br><span class="line">  return ch;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="串口死锁"><a href="#串口死锁" class="headerlink" title="串口死锁"></a>串口死锁</h2><p>串口死锁的原因是HAL_UART_Transmit和HAL_UART_Receive_IT函数相互调用__HAL_LOCK(huart)导致串口状态被异常修改，返回HAL_BUSY 状态，无法再次进入中断接收数据</p>
+<h3 id="解决方法1"><a href="#解决方法1" class="headerlink" title="解决方法1"></a>解决方法1</h3><p>修改回调函数HAL_UART_RxCpltCallback，在里面做解锁操作，虽然不会再出现死锁现象，但是过多的异常检测会导致丢失部分数据，不建议使用</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)</span><br><span class="line">&#123;</span><br><span class="line">	  if(UartHandle-&gt;Instance == UART4)</span><br><span class="line">	  &#123;</span><br><span class="line">			uint16_t i = 0;</span><br><span class="line">			while(HAL_UART_Receive_IT(&amp;huart4, (uint8_t *)aRxBuffer, 1) != HAL_OK )</span><br><span class="line">			&#123;</span><br><span class="line">				if(i++ &gt; 10000 )</span><br><span class="line">				&#123;</span><br><span class="line">					huart4.RxState = HAL_UART_STATE_READY;</span><br><span class="line">					__HAL_UNLOCK(&amp;huart4);</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">	  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="解决方法2"><a href="#解决方法2" class="headerlink" title="解决方法2"></a>解决方法2</h3><p>数据发送使用自定义函数，不要再调用HAL_UART_Transmit</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">void uart4SendByte(uint8_t ch)</span><br><span class="line">&#123;</span><br><span class="line">	while((UART4-&gt;ISR&amp;0X40) == 0);</span><br><span class="line">	UART4-&gt;TDR = (uint8_t)ch;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="解决方法3"><a href="#解决方法3" class="headerlink" title="解决方法3"></a>解决方法3</h3><p>修改HAL_UART_Transmit函数，将__HAL_LOCK(huart)和__HAL_UNLOCK(huart)注释掉，注意每次重新生成代码都要重新注释一下，并不是一个一劳永逸的方法，建议使用方法2</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size, uint32_t Timeout)</span><br><span class="line">&#123;</span><br><span class="line">  uint8_t  *pdata8bits;</span><br><span class="line">  uint16_t *pdata16bits;</span><br><span class="line">  uint32_t tickstart;</span><br><span class="line"></span><br><span class="line">  /* Check that a Tx process is not already ongoing */</span><br><span class="line">  if (huart-&gt;gState == HAL_UART_STATE_READY)</span><br><span class="line">  &#123;</span><br><span class="line">    if ((pData == NULL) || (Size == 0U))</span><br><span class="line">    &#123;</span><br><span class="line">      return  HAL_ERROR;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    //__HAL_LOCK(huart);</span><br><span class="line"></span><br><span class="line">    huart-&gt;ErrorCode = HAL_UART_ERROR_NONE;</span><br><span class="line">    huart-&gt;gState = HAL_UART_STATE_BUSY_TX;</span><br><span class="line"></span><br><span class="line">    /* Init tickstart for timeout management */</span><br><span class="line">    tickstart = HAL_GetTick();</span><br><span class="line"></span><br><span class="line">    huart-&gt;TxXferSize  = Size;</span><br><span class="line">    huart-&gt;TxXferCount = Size;</span><br><span class="line"></span><br><span class="line">    /* In case of 9bits/No Parity transfer, pData needs to be handled as a uint16_t pointer */</span><br><span class="line">    if ((huart-&gt;Init.WordLength == UART_WORDLENGTH_9B) &amp;&amp; (huart-&gt;Init.Parity == UART_PARITY_NONE))</span><br><span class="line">    &#123;</span><br><span class="line">      pdata8bits  = NULL;</span><br><span class="line">      pdata16bits = (uint16_t *) pData;</span><br><span class="line">    &#125;</span><br><span class="line">    else</span><br><span class="line">    &#123;</span><br><span class="line">      pdata8bits  = pData;</span><br><span class="line">      pdata16bits = NULL;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    //__HAL_UNLOCK(huart);</span><br><span class="line"></span><br><span class="line">    while (huart-&gt;TxXferCount &gt; 0U)</span><br><span class="line">    &#123;</span><br><span class="line">      if (UART_WaitOnFlagUntilTimeout(huart, UART_FLAG_TXE, RESET, tickstart, Timeout) != HAL_OK)</span><br><span class="line">      &#123;</span><br><span class="line">        return HAL_TIMEOUT;</span><br><span class="line">      &#125;</span><br><span class="line">      if (pdata8bits == NULL)</span><br><span class="line">      &#123;</span><br><span class="line">        huart-&gt;Instance-&gt;TDR = (uint16_t)(*pdata16bits &amp; 0x01FFU);</span><br><span class="line">        pdata16bits++;</span><br><span class="line">      &#125;</span><br><span class="line">      else</span><br><span class="line">      &#123;</span><br><span class="line">        huart-&gt;Instance-&gt;TDR = (uint8_t)(*pdata8bits &amp; 0xFFU);</span><br><span class="line">        pdata8bits++;</span><br><span class="line">      &#125;</span><br><span class="line">      huart-&gt;TxXferCount--;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    if (UART_WaitOnFlagUntilTimeout(huart, UART_FLAG_TC, RESET, tickstart, Timeout) != HAL_OK)</span><br><span class="line">    &#123;</span><br><span class="line">      return HAL_TIMEOUT;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /* At end of Tx process, restore huart-&gt;gState to Ready */</span><br><span class="line">    huart-&gt;gState = HAL_UART_STATE_READY;</span><br><span class="line"></span><br><span class="line">    return HAL_OK;</span><br><span class="line">  &#125;</span><br><span class="line">  else</span><br><span class="line">  &#123;</span><br><span class="line">    return HAL_BUSY;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>]]></content>
+      <categories>
+        <category>STM32</category>
+      </categories>
+      <tags>
+        <tag>个人博客</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Ubuntu录屏方法</title>
+    <url>/2021/12/30/Ubuntu%E5%BD%95%E5%B1%8F%E6%96%B9%E6%B3%95/</url>
+    <content><![CDATA[<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo apt-get install kazam</span><br></pre></td></tr></table></figure>]]></content>
+      <tags>
+        <tag>个人博客</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>keil使用CMSIS-DSP和CMSIS-NN</title>
+    <url>/2022/02/17/keil%E4%BD%BF%E7%94%A8CMSIS-DSP%E5%92%8CCMSIS-NN/</url>
+    <content><![CDATA[<p>  keil环境下配置CMSIS-DSP和CMSIS-NN的方法</p>
+<span id="more"></span>
+
+<h2 id="下载CMSIS源码"><a href="#下载CMSIS源码" class="headerlink" title="下载CMSIS源码"></a>下载CMSIS源码</h2><p>有两种方式下载CMSIS源文件，下载后的文件结构如下：<br><img src="/2022/02/17/keil%E4%BD%BF%E7%94%A8CMSIS-DSP%E5%92%8CCMSIS-NN/file_struct.jpg" alt="img" style="zoom:50%;"></p>
+<h4 id="GitHub下载"><a href="#GitHub下载" class="headerlink" title="GitHub下载"></a>GitHub下载</h4><p><a href="https://github.com/ARM-software/CMSIS_5">点击这里</a>到github下载对应版本源码</p>
+<h4 id="keil安装路径复制"><a href="#keil安装路径复制" class="headerlink" title="keil安装路径复制"></a>keil安装路径复制</h4><p>通过keil包管理器更新后，可以在C:\Keil_v5\ARM\PACK\ARM\CMSIS路径下找到CMSIS文件</p>
+<h2 id="添加CMSIS源码"><a href="#添加CMSIS源码" class="headerlink" title="添加CMSIS源码"></a>添加CMSIS源码</h2><ol>
+<li>将CMSIS文件夹复制到stm32工程中，删除不需要的文件夹，如Core、DAP等</li>
+<li>将CMSIS/Include以及CMSIS/NN/Include添加到C/C++路径中</li>
+<li>在工程结构中新建CMSIS目录，添加DSP和NN源文件或库到工程目录</li>
+<li>删除原本工程中的core_cm7.h和cmsis_armcc.h，要不然包含arm_math.h会有30个编译错误。这两个文件在CMSIS中已经存在</li>
+</ol>
+<h2 id="编译错误"><a href="#编译错误" class="headerlink" title="编译错误"></a>编译错误</h2>]]></content>
+      <categories>
+        <category>STM32</category>
+      </categories>
+      <tags>
+        <tag>个人博客</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>markdown常用语法</title>
+    <url>/2021/05/13/markdown%E5%B8%B8%E7%94%A8%E8%AF%AD%E6%B3%95/</url>
+    <content><![CDATA[<p>刚搭建好个人博客环境，第一篇博客就写一下markdown的常用语法吧，以前不写博客所以用得少，就当复习了。<br>markdown是一种纯文本格式的标记语言，可以完全脱离鼠标完成格式排版，学会之后能够大大提高写作效率，而且学习成本比较低，几分钟就够了。</p>
+<span id="more"></span>
+
+<p><strong>注意</strong></p>
+<p><strong>不同平台对markdown的支持有些微区别，注意区分</strong></p>
+<h2 id="标题"><a href="#标题" class="headerlink" title="标题"></a>标题</h2><p>markdown使用# 的个数来标记标题，1~6个# 分别对应一至六级标题，注意有一个空格<br>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"># 一级标题</span><br><span class="line">## 二级标题</span><br><span class="line">### 三级标题</span><br><span class="line">#### 四级标题</span><br><span class="line">##### 五级标题</span><br><span class="line">###### 六级标题</span><br></pre></td></tr></table></figure>
+<p>效果如下：</p>
+<h1 id="一级标题"><a href="#一级标题" class="headerlink" title="一级标题"></a>一级标题</h1><h2 id="二级标题"><a href="#二级标题" class="headerlink" title="二级标题"></a>二级标题</h2><h3 id="三级标题"><a href="#三级标题" class="headerlink" title="三级标题"></a>三级标题</h3><h4 id="四级标题"><a href="#四级标题" class="headerlink" title="四级标题"></a>四级标题</h4><h5 id="五级标题"><a href="#五级标题" class="headerlink" title="五级标题"></a>五级标题</h5><h6 id="六级标题"><a href="#六级标题" class="headerlink" title="六级标题"></a>六级标题</h6><h2 id="字体"><a href="#字体" class="headerlink" title="字体"></a>字体</h2><p>markdown支持常规的字体加粗、斜体、斜体加粗、删除线等几种格式，也支持设置大小和颜色<br>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">**这是加粗的文字**</span><br><span class="line">*这是倾斜的文字*`</span><br><span class="line">***这是斜体加粗的文字***</span><br><span class="line">~~这是加删除线的文字~~</span><br><span class="line">&lt;font color = blue&gt; 这是一串蓝色的字 &lt;/font&gt;</span><br><span class="line">&lt;font size = <span class="number">5</span>&gt; 这是一串大小为<span class="number">5</span>的字 &lt;/font&gt;</span><br></pre></td></tr></table></figure>
+<p>效果如下：<br><strong>这是加粗的文字</strong><br><em>这是倾斜的文字</em>`<br><em><strong>这是斜体加粗的文字</strong></em><br><del>这是加删除线的文字</del><br><font color="blue"> 这是一串蓝色的字 </font><br><font size="5"> 这是一串大小为5的字 </font><br><font face="宋体"> 这是一串格式为宋体的字 </font></p>
+<h2 id="代码块"><a href="#代码块" class="headerlink" title="代码块"></a>代码块</h2><p>代码块的插入是markdown最好用的功能，可以和方便得将代码插入到文章当中，查看和复制代码都十分方便<br>单行代码：将单行代码用一个反引号包起来即可实现单行代码插入<br>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">`这是插入的一行代码`</span><br></pre></td></tr></table></figure>
+<p>效果如下：<br><code>这是插入的一行代码</code><br>代码块：代码块的插入是再前后用三个反引号抱起来，反引号单独占一行<br>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">​```</span><br><span class="line">这是插入的代码块</span><br><span class="line">这是插入的代码块</span><br><span class="line">这是插入的代码块</span><br><span class="line">​```</span><br></pre></td></tr></table></figure>
+<p>效果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">这是插入的代码块</span><br><span class="line">这是插入的代码块</span><br><span class="line">这是插入的代码块</span><br></pre></td></tr></table></figure>
+
+<h2 id="引用"><a href="#引用" class="headerlink" title="引用"></a>引用</h2><p>要引用一段话，只需要再前面加上 &gt; 即可。嵌套引用则多加 &gt; 即可。<br>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">&gt; 横眉冷对千夫指，扶手甘为孺子妞</span><br><span class="line">&gt; &gt; 鲁迅</span><br></pre></td></tr></table></figure>
+<p>效果如下：</p>
+<blockquote>
+<p>横眉冷对千夫指，扶手甘为孺子妞</p>
+<blockquote>
+<p>鲁迅</p>
+</blockquote>
+</blockquote>
+<h2 id="分割线"><a href="#分割线" class="headerlink" title="分割线"></a>分割线</h2><p>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">---</span><br><span class="line">***</span><br></pre></td></tr></table></figure>
+<h2 id="效果如下："><a href="#效果如下：" class="headerlink" title="效果如下："></a>效果如下：</h2><hr>
+<h2 id="图片插入"><a href="#图片插入" class="headerlink" title="图片插入"></a>图片插入</h2><p>markdown支持本地和网络多种图片插入方式，我通常只用到本地相对链接插入图片<br>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">![图片](图片地址)</span><br><span class="line"></span><br><span class="line">&lt;img src=<span class="string">&quot;图片地址&quot;</span> alt=<span class="string">&quot;img&quot;</span> style=<span class="string">&quot;zoom:50%;&quot;</span> /&gt;    </span><br></pre></td></tr></table></figure>
+<p>效果如下：<br><img src="/2021/05/13/markdown%E5%B8%B8%E7%94%A8%E8%AF%AD%E6%B3%95/baidu.png" alt="图片"><br><img src="/2021/05/13/markdown%E5%B8%B8%E7%94%A8%E8%AF%AD%E6%B3%95/baidu.png" alt="img" style="zoom:50%;"></p>
+<h2 id="超链接"><a href="#超链接" class="headerlink" title="超链接"></a>超链接</h2><p>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">[我的GitHub](http:<span class="comment">//www.github.com/tajor)</span></span><br><span class="line">[我的博客](http:<span class="comment">//www.windflying.top)</span></span><br></pre></td></tr></table></figure>
+<p>效果如下：<br><a href="http://www.github.com/tajor">我的GitHub</a><br><a href="http://www.windflying.top/">我的博客</a></p>
+<h2 id="列表"><a href="#列表" class="headerlink" title="列表"></a>列表</h2><h3 id="1、无序列表"><a href="#1、无序列表" class="headerlink" title="1、无序列表"></a>1、无序列表</h3><p>无序列表用 - + * 任意一个加一个空格表示<br>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">- 无序列表<span class="number">0</span></span><br><span class="line">+ 无序列表<span class="number">1</span></span><br><span class="line">* 无序列表<span class="number">2</span></span><br></pre></td></tr></table></figure>
+<p>效果如下：</p>
+<ul>
+<li>无序列表0</li>
+</ul>
+<ul>
+<li>无序列表1</li>
+</ul>
+<ul>
+<li>无序列表2</li>
+</ul>
+<h3 id="2、有序列表"><a href="#2、有序列表" class="headerlink" title="2、有序列表"></a>2、有序列表</h3><p>有序列表用数字+. 表示，例如 1.  2.<br>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="number">1.</span> 有序列表<span class="number">1</span></span><br><span class="line"><span class="number">2.</span> 有序列表<span class="number">2</span></span><br><span class="line"><span class="number">3.</span> 有序列表<span class="number">3</span></span><br></pre></td></tr></table></figure>
+<p>效果如下：</p>
+<ol>
+<li>有序列表1</li>
+<li>有序列表2</li>
+<li>有序列表3</li>
+</ol>
+<h2 id="表格"><a href="#表格" class="headerlink" title="表格"></a>表格</h2><p>如果使用Typora编辑器，可以很方便插入表格，比输入markdown语法好用，此处哈市介绍markdown语法插入表格的方法<br>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">表头|表头|表头</span><br><span class="line">---|:--:|---:</span><br><span class="line">内容|内容|内容</span><br><span class="line">内容|内容|内容</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">第二行分割表头和内容。</span><br><span class="line">- 有一个就行，为了对齐，多加了几个</span><br><span class="line">文字默认居左</span><br><span class="line">-两边加：表示文字居中</span><br><span class="line">-右边加：表示文字居右</span><br><span class="line">注：原生的语法两边都要用 | 包起来。此处省略</span><br></pre></td></tr></table></figure>
+<p>效果如下：<br>| 表头 | 表头 | 表头 |<br>| —- | :–: | —: |<br>| 内容 | 内容 | 内容 |<br>| 内容 | 内容 | 内容 |</p>
+<h2 id="隐藏预览"><a href="#隐藏预览" class="headerlink" title="隐藏预览"></a>隐藏预览</h2><p>在hexo框架next主题下，默认首页会全部显示博客内容，会使首页非常长。这种情况可以在博客中插入一条 more 语句，使得预览折叠起来。<br>示例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">&lt;!-- more --&gt;</span><br></pre></td></tr></table></figure>
+
+]]></content>
+      <categories>
+        <category>hexo</category>
+      </categories>
+      <tags>
+        <tag>markdown</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>ubuntu安装Monaco字体</title>
+    <url>/2021/06/11/ubuntu%E5%AE%89%E8%A3%85Monaco%E5%AD%97%E4%BD%93/</url>
+    <content><![CDATA[<p>在win10上装了WSL，结果以前写的QT界面显示不正常，收发的数据在textview中上下错位看着贼难受，思考了一下是WSL缺少字体导致的，安装Monaco之后完美解决。<br>linux系统的字体文件放在/usr/share/fonts/目录以及用户的/.fonts和/.local/share/fonts目录下，第一个位置为系统所用用户共享，后面两个位置则为当前登陆用户所有。</p>
+<ol>
+<li><p>安装到 /usr/share/fonts/</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">wget https://github.com/fangwentong/dotfiles/raw/master/ubuntu-gui/fonts/Monaco.ttf</span><br><span class="line">sudo mkdir -p /usr/share/fonts/custom</span><br><span class="line">sudo mv Monaco.ttf /usr/share/fonts/custom</span><br><span class="line">sudo chmod 744 /usr/share/fonts/custom/Monaco.ttf</span><br><span class="line"></span><br><span class="line">sudo mkfontscale  #生成核心字体信息</span><br><span class="line">sudo mkfontdir</span><br><span class="line">sudo fc-cache -fv </span><br></pre></td></tr></table></figure></li>
+<li><p>安装到 ~/.fonts/</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">wget https://github.com/fangwentong/dotfiles/blob/ubuntu/fonts/Monaco.ttf?raw=true</span><br><span class="line">mkdir -p ~/.fonts</span><br><span class="line">mv Monaco.ttf ~/.fonts</span><br><span class="line">fc-cache -vf  #刷新系统字体缓存</span><br></pre></td></tr></table></figure></li>
+</ol>
+]]></content>
+      <categories>
+        <category>操作系统配置</category>
+      </categories>
+      <tags>
+        <tag>个人博客</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>ubuntu安装Qt及Qwt</title>
+    <url>/2021/05/19/ubuntu%E5%AE%89%E8%A3%85Qt%E5%8F%8AQwt/</url>
+    <content><![CDATA[<p>在ubuntu18.04上安装Qt5 + Qwt开发环境</p>
+<span id="more"></span>
+
+<h2 id="依赖安装"><a href="#依赖安装" class="headerlink" title="依赖安装"></a>依赖安装</h2><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo apt-get install g++</span><br><span class="line">sudo apt-get install build-essential </span><br><span class="line">sudo apt-get install libgl1-mesa-dev</span><br><span class="line">sudo apt-get install libglu1-mesa-dev freeglut3-dev </span><br></pre></td></tr></table></figure>
+
+<h2 id="Qt安装"><a href="#Qt安装" class="headerlink" title="Qt安装"></a>Qt安装</h2><h3 id="图形界面安装"><a href="#图形界面安装" class="headerlink" title="图形界面安装"></a>图形界面安装</h3><p>官网下载安装文件比较慢，国内有很多镜像下载比较快，这里提供一个清华大学的下载地址，点击<a href="https://mirrors.tuna.tsinghua.edu.cn/qt/archive/qt/5.9/5.9.0/">这里</a>,下载QT5.9.0版本的文件，需要其他版本可以返回上级目录选择。这里采用图形界面安装的方式安装Qt，所以需要下载.run文件，下载完成后执行安装命令，注意赋予文件可执行权限，按照提示安装</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo chmod +x qt-opensource-linux-x64-5.9.0.run</span><br><span class="line">sudo ./qt-opensource-linux-x64-5.9.0.run</span><br></pre></td></tr></table></figure>
+
+<h3 id="添加环境变量"><a href="#添加环境变量" class="headerlink" title="添加环境变量"></a>添加环境变量</h3><p>执行下面命令打开.bachrc文件</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">gedit ~/.bachrc</span><br></pre></td></tr></table></figure>
+
+<p>在文件最后加入下面语句，将Qt路径添加到环境变量中,</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">export PATH=&quot;/opt/Qt5.9//Qtx.x.x/x.x/gcc/bin&quot;:$PATH</span><br></pre></td></tr></table></figure>
+
+<p>添加后重启终端或者执行</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">source ~/.bashrc</span><br></pre></td></tr></table></figure>
+
+<h2 id="Qwt安装"><a href="#Qwt安装" class="headerlink" title="Qwt安装"></a>Qwt安装</h2><h3 id="下载安装qwt"><a href="#下载安装qwt" class="headerlink" title="下载安装qwt"></a>下载安装qwt</h3><p>Qwt是一个基于Qt的图形库，可以方便画曲线画图形，点击<a href="https://sourceforge.net/projects/qwt/files/qwt/">这里</a>下载安装文件，我用的是qwt-6.1.2。下载下来解压到 /usr/local/ 下，cd到 /usr/local/qwt6.1.2，用qmake编译qwt</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">/opt/Qt5.9.0/5.9.0/gcc_64/bin/qmake </span><br></pre></td></tr></table></figure>
+
+<p><strong>注意</strong></p>
+<p>系统默认已有一个qmake，这里要用上一步安装的qmake，需要输入完整路径/opt/Qt5.9.1/5.9.1/gcc_64/bin/qmake</p>
+<p>然后执行命令安装qwt</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">make</span><br><span class="line">sudo make install</span><br></pre></td></tr></table></figure>
+
+<h3 id="添加qwt路径"><a href="#添加qwt路径" class="headerlink" title="添加qwt路径"></a>添加qwt路径</h3><p>打开 ~/.bashrc，最后加入qwt路径</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo gedit ~/.bashrc</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">export LD_LIBRARY_PATH=/usr/local/qwt-6.1.3/lib</span><br></pre></td></tr></table></figure>
+
+<h3 id="拷贝lib文件"><a href="#拷贝lib文件" class="headerlink" title="拷贝lib文件"></a>拷贝lib文件</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo cp /usr/local/qwt-6.1.2/lib/*   /opt/Qt5.9.0/5.9/gcc_64/lib</span><br></pre></td></tr></table></figure>
+
+<h3 id="拷贝so文件"><a href="#拷贝so文件" class="headerlink" title="拷贝so文件"></a>拷贝so文件</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">cd /usr/local/qwt-6.1.2/plugins/designer/</span><br><span class="line">ldd libqwt_designer_plugin.so (该文件仅root是rwx权限，链接了libqwt.so.6）</span><br><span class="line">sudo cp /usr/local/qwt-6.1.2/plugins/designer/libqwt_designer_plugin.so /opt/Qt5.9.0/Tools/QtCreator/lib/Qt/plugins/designer</span><br></pre></td></tr></table></figure>
+
+<h3 id="使用方法"><a href="#使用方法" class="headerlink" title="使用方法"></a>使用方法</h3><p>在自己工程的pro文件中加入</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">INCLUDEPATH += /usr/local/qwt-6.1.3/include  </span><br><span class="line">LIBS += -L &quot;/usr/local/qwt-6.1.3/lib/&quot; -lqwt  </span><br></pre></td></tr></table></figure>
+
+<h2 id="致谢"><a href="#致谢" class="headerlink" title="致谢"></a>致谢</h2><p>感谢博主<a href="https://youth.blog.csdn.net/">wsqyouth</a>的教程</p>
+]]></content>
+      <categories>
+        <category>Qt</category>
+      </categories>
+      <tags>
+        <tag>ubuntu</tag>
+        <tag>Qt</tag>
+        <tag>Qwt</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>ubuntu环境下安装及部署hexo</title>
+    <url>/2021/05/16/ubuntu%E7%8E%AF%E5%A2%83%E4%B8%8B%E5%AE%89%E8%A3%85%E5%8F%8A%E9%83%A8%E7%BD%B2hexo/</url>
+    <content><![CDATA[<p>在ubuntu环境下安装hexo及及其依赖，并部署到github上，将个人域名解析到博客仓库</p>
+<span id="more"></span>
+
+<h2 id="安装Node-js、Git、hexo"><a href="#安装Node-js、Git、hexo" class="headerlink" title="安装Node.js、Git、hexo"></a>安装Node.js、Git、hexo</h2><ol>
+<li><p>安装Node.js<br>在终端输入以下命令</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">sudo apt-get update</span><br><span class="line">sudo apt-get install -y python-software-properties software-properties-common</span><br><span class="line">sudo add-apt-repository ppa:chris-lea/node.js</span><br><span class="line">sudo apt-get update</span><br><span class="line">sudo apt-get install nodejs</span><br><span class="line">sudo apt install nodejs-legacy</span><br><span class="line">sudo apt install npm</span><br><span class="line">sudo npm install n -g</span><br><span class="line">sudo n stable</span><br><span class="line">sudo node -v</span><br></pre></td></tr></table></figure></li>
+<li><p>安装Git</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">sudo apt-get install git</span><br></pre></td></tr></table></figure></li>
+<li><p>安装hexo</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">sudo npm install -g hexo-cli</span><br></pre></td></tr></table></figure>
+<h2 id="在本地创建网站"><a href="#在本地创建网站" class="headerlink" title="在本地创建网站"></a>在本地创建网站</h2></li>
+<li><p>创建一个网站</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">sudo hexo init hexo</span><br><span class="line">cd hexo</span><br><span class="line">sudo npm install</span><br></pre></td></tr></table></figure></li>
+<li><p>新建一个博客<br>source中默认已有一个hello_world博客，新建博客命令如下</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">hexo n myblog</span><br></pre></td></tr></table></figure>
+<p>执行该命令后，会在hexo/source/_posts文件夹下生成一个myblog.md文件</p>
+</li>
+<li><p>本地预览博客<br>输入下面命令，将博客部署到本地</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">hexo g </span><br><span class="line">hexo s</span><br></pre></td></tr></table></figure>
+<p>执行之后打开浏览器输入localhost:4000即可预览网页</p>
+</li>
+</ol>
+<h2 id="部署到github"><a href="#部署到github" class="headerlink" title="部署到github"></a>部署到github</h2><ol>
+<li>创建github仓库<br>登陆github账号，新建一个仓库，仓库名字必须是username.github.io，权限设置为public</li>
+<li>配置git<br>详情清查阅git使用手册</li>
+<li>修改_config.yml<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"># Deployment</span><br><span class="line">## Docs: https:<span class="comment">//hexo.io/docs/deployment.html</span></span><br><span class="line">deploy: </span><br><span class="line">  type: git</span><br><span class="line">  repo: git<span class="meta">@github</span>.com:你的GitHub用户名/你的GitHub用户名.github.io.git</span><br><span class="line">  branch: master</span><br></pre></td></tr></table></figure></li>
+<li>上传到github<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">hexo d</span><br></pre></td></tr></table></figure>
+执行命令即可部署到github，然后可以通过username.github.io访问博客主页了，以后新建博客部署只需执行以下命令<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">hexo n name <span class="comment">//新建一个博客，然后修改ia.md文件内容</span></span><br><span class="line">hexo clean <span class="comment">//清除缓存</span></span><br><span class="line">hexo g <span class="comment">// 生成部署文件</span></span><br><span class="line">hexo d <span class="comment">//上传</span></span><br></pre></td></tr></table></figure></li>
+</ol>
+<h2 id="绑定个人域名"><a href="#绑定个人域名" class="headerlink" title="绑定个人域名"></a>绑定个人域名</h2><p>如果觉得每次通过username.gituhb.io访问博客很low，可以去域名服务商注册一个域名，然后添加解析到博客地址，即可通过个人域名访问博客</p>
+<ol>
+<li>在source文件夹下新建一个CNAME文件，不带后缀，打开后将个人域名写入文件，不要加http和www，例如我的域名是 windflying.com</li>
+</ol>
+<p><img src="/2021/05/16/ubuntu%E7%8E%AF%E5%A2%83%E4%B8%8B%E5%AE%89%E8%A3%85%E5%8F%8A%E9%83%A8%E7%BD%B2hexo/cname.png" alt="pic"></p>
+<ol start="2">
+<li>添加解析的内容如下</li>
+</ol>
+]]></content>
+      <categories>
+        <category>hexo</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>ubuntu配置ESP32开发环境</title>
+    <url>/2021/05/16/ubuntu%E9%85%8D%E7%BD%AEESP32%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83/</url>
+    <content><![CDATA[<p>在ubuntu系统中安装ESP32开发环境，基于乐鑫esp-idf</p>
+<span id="more"></span>
+
+<h2 id="安装依赖软件包"><a href="#安装依赖软件包" class="headerlink" title="安装依赖软件包"></a>安装依赖软件包</h2><p>打开终端输入</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">sudo apt-get install git wget flex bison gperf python3 python3-pip python3-setuptools cmake ninja-build ccache libffi-dev libssl-dev dfu-util</span><br></pre></td></tr></table></figure>
+<h2 id="安装交叉编译工具连"><a href="#安装交叉编译工具连" class="headerlink" title="安装交叉编译工具连"></a>安装交叉编译工具连</h2><p>创建一个文件夹来保存交叉编译工具，注意不要有空格，最好不要有中文</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">mkdir esp</span><br><span class="line">cd esp</span><br><span class="line">wget https:<span class="comment">//dl.espressif.com/dl/xtensa-esp32-elf-linux64-1.22.0-61-gab8375a-5.2.0.tar.gz</span></span><br></pre></td></tr></table></figure>
+<p><strong>注意</strong><br><em>如果最后出现 “error: case value ‘3’ not in enumerated type ‘i2s_comm_format_t {aka const enum <anonymous>}’ [-Werror=switch] “，则用下面交叉工具替换</anonymous></em></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">wget https:<span class="comment">//dl.espressif.com/dl/xtensa-esp32-elf-gcc8_2_0-esp32-2019r1-linux-amd64.tar.gz</span></span><br></pre></td></tr></table></figure>
+<p>下载完成后解压到esp文件夹，添加路径到环境变量中，注意自己存放的路径，使用gedit打开.bashrc文件</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">gedit ~/.bashrc</span><br></pre></td></tr></table></figure>
+<p>将实际路径添加进去</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">export PATH=<span class="string">&quot;$PATH:$HOME:esp/xtensa-esp32-elf/bin:$PATH&quot;</span></span><br></pre></td></tr></table></figure>
+<h2 id="安装esp-idf"><a href="#安装esp-idf" class="headerlink" title="安装esp-idf"></a>安装esp-idf</h2><p>可以选择从github或gitee获得esp-idf</p>
+<h3 id="github源安装方法"><a href="#github源安装方法" class="headerlink" title="github源安装方法"></a>github源安装方法</h3><p>将esp-idf下载至esp文件夹，可以用浏览器去官方下载后解压过来，也可以输入以下命令获取</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">git clone --recursive https:<span class="comment">//github.com/espressif/esp-idf.git</span></span><br></pre></td></tr></table></figure>
+<p>这一步也可以分布进行，先clone再链接子模块</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">git clone  https://github.com/espressif/esp-idf.git</span><br><span class="line">cd esp-idf</span><br><span class="line">git submodule update --init</span><br></pre></td></tr></table></figure>
+
+<p>除了 ESP-IDF 本身，还需要安装 ESP-IDF 使用的各种工具，比如编译器、调试器、Python 包等</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">cd ~/esp/esp-idf</span><br><span class="line">./install.sh</span><br></pre></td></tr></table></figure>
+
+<p>与交叉编译工具一样，esp-idf也需要将路径加入到环境变量中，打开～/.bashrc，在最后加入实际路径</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">export IDF_PATH=~/esp/esp-idf</span><br></pre></td></tr></table></figure>
+<p><strong>注意</strong><br>环境变量修改后需要重启终端生效，可以用下面命令测试是否设置成功</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">printenv PATH IDF_PATH</span><br></pre></td></tr></table></figure>
+<p>若在输出中找到了esp路径，则设置成功</p>
+<h3 id="gitee源安装方法"><a href="#gitee源安装方法" class="headerlink" title="gitee源安装方法"></a>gitee源安装方法</h3><ul>
+<li><p>下载子仓库重定向工具</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">git clone https://gitee.com/EspressifSystems/esp-gitee-tools.git</span><br></pre></td></tr></table></figure></li>
+<li><p>clone主仓库代码</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">git clone https://gitee.com/EspressifSystems/esp-idf.git</span><br></pre></td></tr></table></figure></li>
+<li><p>clone重定向后的子仓库代码</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">cd esp-gitee-tools</span><br><span class="line">export EGT_PATH=$(pwd)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">cd esp-idf</span><br><span class="line">$EGT_PATH/submodule-update.sh</span><br></pre></td></tr></table></figure></li>
+<li><p>安装工具链</p>
+<p>将默认python版本切换成python3后执行</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">pip install -r requirements.txt</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h2 id="测试例程"><a href="#测试例程" class="headerlink" title="测试例程"></a>测试例程</h2><p>进入esp-idf/examples/get-started/hello_world/文件夹中，打开终端输入</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">make menuconfig</span><br></pre></td></tr></table></figure>
+<p>若弹出下面下面菜单，则开发环境安装成功了<br><img src="/2021/05/16/ubuntu%E9%85%8D%E7%BD%AEESP32%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83/test.png" alt="pic"><br>按q退出后make flash下载可执行文件到开发板中，其他历程用法一样，需要改配置就进入make menuconfig中修改，不改则直接make flash</p>
+<h2 id="make指令用法"><a href="#make指令用法" class="headerlink" title="make指令用法"></a>make指令用法</h2><ul>
+<li>make partition_table 查看分区</li>
+<li>make flash 编译并刷机</li>
+<li>make monitor 查看串口输出</li>
+<li>make app 只编译app模块</li>
+<li>make app-flash 只编译并烧写app模块</li>
+<li>make menuconfig 配置编译参数</li>
+<li>make all 编译所有</li>
+<li>make partition_table-flash 刷新分区表</li>
+<li>make erase_flash 擦除flash</li>
+</ul>
+<h2 id="常见错误及解决办法"><a href="#常见错误及解决办法" class="headerlink" title="常见错误及解决办法"></a>常见错误及解决办法</h2><h3 id="编译时报错make-没有规则可制作目标“check-python-dependencies”"><a href="#编译时报错make-没有规则可制作目标“check-python-dependencies”" class="headerlink" title="编译时报错make: *** 没有规则可制作目标“check_python_dependencies”"></a>编译时报错make: *** 没有规则可制作目标“check_python_dependencies”</h3><p><img src="/2021/05/16/ubuntu%E9%85%8D%E7%BD%AEESP32%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83/image1.png" alt="pic"></p>
+<p>解决办法：</p>
+<ul>
+<li><p>安装python pip管理工具</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo apt-get install python-pip</span><br></pre></td></tr></table></figure></li>
+<li><p>cd到esp-idf目录，安装缺失packages</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">pip install -r requirements.txt</span><br></pre></td></tr></table></figure>
+
+<h3 id="编译报错”ImportError-No-module-named-future”"><a href="#编译报错”ImportError-No-module-named-future”" class="headerlink" title="编译报错”ImportError: No module named future”"></a>编译报错”ImportError: No module named future”</h3><p>手动安装模块即可</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">pip install future</span><br><span class="line">pip install six</span><br><span class="line">pip install django_import_export</span><br></pre></td></tr></table></figure></li>
+</ul>
+]]></content>
+      <categories>
+        <category>ESP32</category>
+      </categories>
+      <tags>
+        <tag>ESP32</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>win10安装wsl并配置远程桌面</title>
+    <url>/2021/05/19/win10%E5%AE%89%E8%A3%85wsl%E5%B9%B6%E9%85%8D%E7%BD%AE%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2/</url>
+    <content><![CDATA[<p>在Windows上安装WSL(Ubuntu18.04)，以前一直是使用Ubuntu16.04，图形界面用的VcXsrv，这次将系统升级成18.04之后，VcXsrv桌面一直是黑色的，还有很多其他问题，所以将桌面换成远程桌面了。</p>
+<span id="more"></span>
+
+<h2 id="Win10设置"><a href="#Win10设置" class="headerlink" title="Win10设置"></a>Win10设置</h2><p>安装前要打开两个windows设置</p>
+<h3 id="打开开发人员模式"><a href="#打开开发人员模式" class="headerlink" title="打开开发人员模式"></a>打开开发人员模式</h3><img src="/2021/05/19/win10%E5%AE%89%E8%A3%85wsl%E5%B9%B6%E9%85%8D%E7%BD%AE%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2/image1.png" alt="开发人员模式" style="zoom:50%;">
+
+<h3 id="适用于Linux的Windows子系统"><a href="#适用于Linux的Windows子系统" class="headerlink" title="适用于Linux的Windows子系统"></a>适用于Linux的Windows子系统</h3><p>进入 控制面板-&gt;程序和功能-&gt;启用或关闭windows功能，在适用于Linux的Windows子系统选项上打勾</p>
+<img src="/2021/05/19/win10%E5%AE%89%E8%A3%85wsl%E5%B9%B6%E9%85%8D%E7%BD%AE%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2/image.png" alt="pic" style="zoom:135%;">
+
+<h2 id="安装Ubuntu"><a href="#安装Ubuntu" class="headerlink" title="安装Ubuntu"></a>安装Ubuntu</h2><p>在应用商店中搜索ubuntu，随便选择一个系统安装，我安装的是Ubuntu18.04 LTS</p>
+<img src="/2021/05/19/win10%E5%AE%89%E8%A3%85wsl%E5%B9%B6%E9%85%8D%E7%BD%AE%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2/image2.png" alt="pic" style="zoom:51%;">
+
+<p>安装完成后启动WSL，第一次启动需要等几分钟才能完成安装，根据提示设置用户和密码，WSL就安装完成了。换源的重要性就不多说，除非觉得自己的时间不宝贵，启动终端输入下面命令，换成阿里云的源，也可以选择清华大学、华为或者其他国内源。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak </span><br><span class="line">sudo sed -i &#x27;s/archive.ubuntu.com/mirrors.aliyun.com/g&#x27; /etc/apt/sources.list</span><br><span class="line">sudo apt update</span><br><span class="line">sudo apt upgrade -y</span><br></pre></td></tr></table></figure>
+
+<h2 id="配置远程桌面"><a href="#配置远程桌面" class="headerlink" title="配置远程桌面"></a>配置远程桌面</h2><h3 id="安装软件"><a href="#安装软件" class="headerlink" title="安装软件"></a>安装软件</h3><p>安装支持软件</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo apt-get install xorg</span><br><span class="line">sudo apt-get install xfce4</span><br><span class="line">sudo apt-get install xrdp</span><br></pre></td></tr></table></figure>
+
+<h3 id="配置xrdf"><a href="#配置xrdf" class="headerlink" title="配置xrdf"></a>配置xrdf</h3><p>将xrdp端口配置成一个任意端口，随便填都行</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo sed -i &#x27;s/port=3389/port=3390/g&#x27; /etc/xrdp/xrdp.ini</span><br><span class="line">sudo echo xfce4-session &gt;~/.xsession</span><br></pre></td></tr></table></figure>
+
+<h3 id="启动xrdp服务"><a href="#启动xrdp服务" class="headerlink" title="启动xrdp服务"></a>启动xrdp服务</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo service xrdp start</span><br></pre></td></tr></table></figure>
+
+<h3 id="查看WSL的IP地址"><a href="#查看WSL的IP地址" class="headerlink" title="查看WSL的IP地址"></a>查看WSL的IP地址</h3><p>输入下面命令查看IP</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ifconfig</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2021/05/19/win10%E5%AE%89%E8%A3%85wsl%E5%B9%B6%E9%85%8D%E7%BD%AE%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2/image3.png" alt="pic"></p>
+<p>这里使用两个IP都是可以的，127.0.0.1是本地IP，不联网的情况下也是有的，建议使用这个。下面个IP需要电脑连接了网络才会被分配，且不是每次都一样，所以使用起来不方便，不建议使用(我不清楚如果使用这个IP是不是连接就要走网络了)。</p>
+<h3 id="配置远程桌面连接"><a href="#配置远程桌面连接" class="headerlink" title="配置远程桌面连接"></a>配置远程桌面连接</h3><p>启动远程桌面，填入上一步查询到的IP，以及配置的连接端口，点击连接，然后同意连接请求</p>
+<img src="/2021/05/19/win10%E5%AE%89%E8%A3%85wsl%E5%B9%B6%E9%85%8D%E7%BD%AE%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2/image4.png" alt="pic" style="zoom:110%;">
+
+<p>连接成功会进入桌面，输入用户名和密码即可</p>
+<img src="/2021/05/19/win10%E5%AE%89%E8%A3%85wsl%E5%B9%B6%E9%85%8D%E7%BD%AE%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2/image5.png" alt="pic" style="zoom:35%;">
+
+<p>成功后即可愉快使用win+linux双系统了，所有文件系统都是双系统共享的，比虚拟机不知道高到哪里去了，不用那么麻烦配置文件共享  （ 虽然wsl本质也是虚拟机<img src="/2021/05/19/win10%E5%AE%89%E8%A3%85wsl%E5%B9%B6%E9%85%8D%E7%BD%AE%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2/image6.png" alt="pic" style="zoom:5%;"></p>
+<p><strong>注意</strong></p>
+<p>每次需要使用远程桌面的时候，都要先在终端启动xrdp服务</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo service xrdp start</span><br></pre></td></tr></table></figure>
+
+<h2 id="可能遇到的问题及解决办法"><a href="#可能遇到的问题及解决办法" class="headerlink" title="可能遇到的问题及解决办法"></a>可能遇到的问题及解决办法</h2><h3 id="无法显示中文"><a href="#无法显示中文" class="headerlink" title="无法显示中文"></a>无法显示中文</h3><p>打开文件</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo gedit /etc/locale.gen</span><br></pre></td></tr></table></figure>
+
+<p>找到zh_CN.UTF-8，将前面的#和空格删除，然后保存</p>
+<img src="/2021/05/19/win10%E5%AE%89%E8%A3%85wsl%E5%B9%B6%E9%85%8D%E7%BD%AE%E8%BF%9C%E7%A8%8B%E6%A1%8C%E9%9D%A2/image7.png" alt="pic" style="zoom:70%;">
+
+<p>安装中文支持包</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo apt-get install language-pack-zh-hans</span><br></pre></td></tr></table></figure>
+
+<p>打开文件</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo gedit /etc/environment</span><br></pre></td></tr></table></figure>
+
+<p>在最后追加</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">LANG=&quot;zh_CN.UTF-8&quot;</span><br><span class="line">LANGUAGE=&quot;zh_CN:zh:en_US:en&quot;</span><br></pre></td></tr></table></figure>
+
+<p>打开文件</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo gedit /var/lib/locales/supported.d/local</span><br></pre></td></tr></table></figure>
+
+<p>在最后加入</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">en_US.UTF-8 UTF-8</span><br><span class="line">zh_CN.UTF-8 UTF-8</span><br><span class="line">zh_CN.GBK GBK</span><br><span class="line">zh_CN GB2312</span><br></pre></td></tr></table></figure>
+
+<p>执行</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo locale-gen</span><br></pre></td></tr></table></figure>
+
+<p>解决空格乱码</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">sudo apt-get install fonts-droid-fallback ttf-wqy-zenhei ttf-wqy-microhei fonts-arphic-ukai fonts-arphic-uming</span><br></pre></td></tr></table></figure>
+
+]]></content>
+      <categories>
+        <category>操作系统配置</category>
+      </categories>
+      <tags>
+        <tag>wsl</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>文件转数组程序</title>
+    <url>/2021/07/15/%E6%96%87%E4%BB%B6%E8%BD%AC%E6%95%B0%E7%BB%84%E7%A8%8B%E5%BA%8F/</url>
+    <content><![CDATA[<p>将文件转换成C语言数组的python程序</p>
+<span id="more"></span>
+
+
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#!/usr/bin/python</span><br><span class="line"># -*- coding:utf-8 -*-</span><br><span class="line"></span><br><span class="line">import sys</span><br><span class="line">inputFile = open(sys.argv[1], &#x27;rb&#x27;)</span><br><span class="line">outputFile = open(sys.argv[2], &quot;w&quot;)</span><br><span class="line">arrayName = sys.argv[3] </span><br><span class="line"></span><br><span class="line">outputFile.write(&quot;static const char &quot; + arrayName + &quot;[] = &#123;&quot;)</span><br><span class="line"></span><br><span class="line">while True:</span><br><span class="line">    data = inputFile.read(500)</span><br><span class="line">    if not data:</span><br><span class="line">        break</span><br><span class="line">    str_line = &quot;&quot;</span><br><span class="line">    for i in data:</span><br><span class="line">        str_line += &quot;0x&#123;0:02x&#125;&quot;.format(i) + &quot;,&quot;</span><br><span class="line">    outputFile.write(str_line)</span><br><span class="line"></span><br><span class="line">outputFile.write(&quot;&#125;;&quot;)</span><br><span class="line">outputFile.close()</span><br></pre></td></tr></table></figure>
+
+<p>注意手动删除文件末尾处多出的一个“,”</p>
+]]></content>
+      <categories>
+        <category>python</category>
+      </categories>
+      <tags>
+        <tag>个人博客</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>月球移植</title>
+    <url>/2021/07/16/%E6%9C%88%E7%90%83%E7%A7%BB%E6%A4%8D/</url>
+    <content><![CDATA[<p>这是我第一次主动写小说<br>一直以来都很讨厌写东西，大概是因为上学的时候总被逼着写作文，久而久之，对写作也越来越排斥<br>写这篇小说源于B站的科幻征文活动，主办方提供决赛期间的食宿交通，我掐指一算那个时候我正放高温假在家，决赛地和我工作地点一致，参加决赛可以报销机票，抱着白嫖一张B站机票的幻想，花了一天时间，在距离截至提交时间还有一个半小时的时候写完了小说。提交后审核没有通过，通知我违规，内容已被锁定。和客服沟通了好久，终于给我审核通过发布了文章，但过了一会儿又发了个通知说我的内容不符合规则，不允许参加此次评选活动。我猜测是我在小说里面写了一些讽刺的东西，所以审核不给我通过<br>本来是赶工出来的小说，里面有很多东西写得很简洁，不够丰富，结尾也是没时间了草草结尾，但也不改了，保留最原始的文字吧，记录被B站反白嫖的一天</p>
+<span id="more"></span>
+
+
+<p>    在前往拜科努尔航天发射场的航班上，我正直勾勾地望着窗外。从上中学起，我就一直很享受路途中面向窗外发呆的时光，这种状态下的我，没有压力、没有束缚、也没有烦恼，不用在意世俗眼光，不用理会伦理道德。然而这次我却不再如往日一样轻松自在，尽管此时飞机已处于平流层，我却无法透过舷窗看见大地，也看不见白云，映入眼帘的是灰蒙蒙的一片。大地被阻挡在灰色之下，太阳也披上了灰色的面纱，隐藏在雾中，只望见一个淡影 </p>
+<p>    这一切，起源于一周前的激烈地质运动。</p>
+<p>    2099年12月31日，当全世界都在为迎接世纪跨年的到来而疯狂庆祝的时候，亚欧板块与印度洋板块也在此时发生激烈碰撞，在中国、尼泊尔、印度等地同时引发了里氏15级以上的特大地震，顷刻间，房屋倒塌、山石滚落、水库决堤。孟加拉湾掀起的海啸淹没了新加坡与马来西亚，甚至到达了澳大利亚北海岸，全球范围内都感受到了强烈的震感。而比这些更糟糕的是，持续几天的大地震在短时间内将青藏高原的海拔抬升了数百米。在亚欧板块与印度洋板块强烈地碰撞，以及青藏高原巨大的重量双重作用下，地壳发生了断裂。断裂带东起西藏林芝市，西至印度、尼泊尔交界处，南至孟加拉国境内，形成一块边长约一千公里的勒洛三角形断裂区域，三角形区域内又破裂成几块，正缓缓向地幔中下沉。炙热的熔岩从断裂带缝隙中不断喷出，在青藏高原上形成了一个几千公里长的带状火山群。</p>
+<p>    全球范围内的大部分火山也在地震影响下开始大规模喷发，熔岩被喷射到上千米高空，较细的火山灰形成高耸的对流羽状物，像极了核爆炸时的蘑菇云。在最严重的东南亚、中国、印度地区，黑云的厚度达到了几千米，阳光也无法完全穿透黑云，大地笼罩在一片黑暗之下，只有在万米高空中才可见一丝光亮。</p>
+<p>    专家预测，破裂的地壳将在一个月后完全沉入地幔之中，到那时将会在地球上形成一个直径一千多公里的超级火山，而要经过上百年，洞口才会慢慢冷却凝固成为新的陆地，在此之前，巨大的熔岩火海会加速水分蒸发，与大量火山灰相融和，将地球紧紧包围。太阳也将对地球加热，届时地球将成为一个巨大的“地球蒸笼”，将不再适合人类生存。</p>
+<p>    联合国紧急组织了众多科学家进行了远程全息会议，大会会场上，联合国秘书长诸葛象牙率先发言：</p>
+<p>    “现在大会正式开始，出席本次大会的有，中国驻联合国代表王多鱼先生，俄罗斯驻联合国代表梅得勇诺夫先生、法国驻联合国代表达文基先生、英国驻联合国代表诺塞尔腐先生、美属阿拉斯加驻联合国代表唐纳德离普先生，以及其他各国驻联合国代表，让我们欢迎各位代表参加此次会议。”</p>
+<p>    诸葛象牙稍作停顿，看了一眼无人鼓掌的虚拟会场，咽了口唾沫后继续说道：</p>
+<p>    “同时也欢迎各国科学家参加本次会议，正如大家所知，我们的地球正遭遇一场灭顶之灾，青藏高原正在沦陷，人类文明的延续遇到了史上最强挑战，如果不能取得这次地球保卫战的胜利，我们人类700万年的光辉历史将化为乌有，地球上最伟大的物种、宇宙中最璀璨的文明将不复存在！我们联合国各代表已于昨日紧急召开研讨会，大会表决通过了地球自救的方案，即“割月补地”计划。”</p>
+<p>    见诸葛象牙终于说到了关键点，科学家们松开了一直紧握的双拳，脸上的表情也由焦急变成了严肃。</p>
+<p>    诸葛象牙继续说道：</p>
+<p>    “计划分为三部分。第一步从月球上切割出一块大小与地球漏洞差不多岩石补丁，第二步，将切割出来的补丁运输到地球，第三步，将补丁放入缺口中，完成缺口修补。你们都是世界上最精英的科学家，现在只需要你们来完善计划中的细节，并制定出施工方案，情况紧急，我们只有一个月左右，请抓紧时间，现在你们可以发表建议了。”</p>
+<p>    说完按了一下面前的按键，解除了参会者的禁言设置</p>
+<p>    科学家们面面相觑，他们原以为大会的目的是制定地球拯救方案，没想到却是让他们制定已有方案的执行计划，并且是一个如此疯狂的计划。短暂的沉默之后，一位大胡子科学家愤怒说道：</p>
+<p>    “你们的方案没有经过科学论证，也没有条件调研，没有征求科学界意见，怎么可以如此草率拍板定案”</p>
+<p>    “我觉得在理，当务之急是先往月球运送移民，保住人类文明的种子”，另一位科学家应和到</p>
+<p>    接着，会议上充斥着科学家们反对的声音，都在争先恐后地发表自己的意见，已完全听不清说话的内容，持续了一会儿后，发言人又打开了禁言设置，说道：</p>
+<p>    “都别吵了，你们这些科学家都是知识分子，吵来吵去成何体统，我们容忍知识分子的脾气，但不是没有限度，吵架也要分场合，现在是地球最危急的时候，我们正面临着最大的挑战，我们要万众一心、争分夺秒、克服灾难，现在每浪费一秒钟人类就多一份危险，你们的每一句话都是在消耗我们的宝贵时间，可能就会使最后的自救计划仅仅因为差一秒钟而失败。我们制定的方案是经过各国代表严格论证过的，各国的代表都是每个国家精心选拔出来的，最优秀的人选，相信在他们的带领下我们一定可以取得这次地球保卫战的胜利。我们也不是没有想过移民月球，但是月球基地现在只能提供一千万人的生存环境，而且大地震已经摧毁了地球的大部分发射基地与发射设施，短时间内无法修复，我们目前送一千万人上月球的能力都已经不具备，移民月球意味着我们将放弃地球上的一百多亿公民，只有几百万人能够活下来，这是绝对不允许的，我们不能放弃任何一个人。我们也清楚“割月补地”计划一旦执行，现存的地月运载能力将全部用于物料运输，无法再承担人类月球移民，如果方案失败，幸存人类将不足百万。但是我们对“割月补地”有信心，全世界人民都将活下来。最后提醒你们一点，请你们来参加会议是来提建议的，不是来提意见的，谁再捣乱那就请退出会议。”</p>
+<p>    说罢，诸葛象牙将刚才言辞最激烈的几位科学家踢出了会议。随后有一部分科学家主动退出了会议。</p>
+<p>    诸葛象牙扫视了一圈参会人员说：</p>
+<p>    “危机到来之时，强权即公理！现在可以开始计划讨论了吧”</p>
+<p> </p>
+<p>    大会确定了来自中国的著名科学家杨大伟为总指挥。</p>
+<p>    杨大伟年少成名，15岁时参加中考取得了六门总分599分，五门满分一门99分的优秀成绩，然后破格参加了当年高考，轻松考取了世界top2的名校西北工业大学，被人称为2050年后第一个神童。</p>
+<p>    神童一词曾经在21世纪初被广泛应用，在那个年代，天才多如狗神童遍地走，会背圆周率可以称为神童，会速算也能称为神童，最后人们发现，这些神童长大后全都泯然众人矣，神童成为了笑话。于是大约2020年之后，神童便慢慢成为了一个侮辱性的词了，都怕自家孩子被人冠以神童的称号。</p>
+<p>    西北工业大学曾经只是一所普通大学，直到2030年中美大战后才跻身世界一流大学。</p>
+<p>    2030年，由于中国的强势崛起，威胁到美国的霸主地位，美国总统唐纳德建国以中国危害美国国家安全为由对中国宣战，喊出一个月消灭中国的狂言。结果开战仅仅三天，中国就打败了美国。</p>
+<p>    中国用苍穹系统拦截了美军导弹，东风导弹直接炸到美国本土，空间礼炮轻松摧毁制导系统，量子干扰切断了通信链路……</p>
+<p>    中国用一个个未曾公开的武器轻松战胜美国。美国总统唐纳德建国狗急跳墙发动了核战争，结果却是全部被拦截在美国本土。</p>
+<p>    中国震惊了世界，谁也没想到中国如此深藏不露，本以为是势均力敌的战争，却是大人打小朋友。战争过后，中国公开了武器与背后的研发人员，授予了多人共和国勋章。人们发现参与到研发的人员中，绝大部分都来自西北工业大学和哈尔滨工业大学，两所学校为国防事业立下汗马功劳。而在此之前，这两所学校由于缺少赚钱多的金融、商务、法学等专业，一直被其他同规格的大学看不起，调侃他们为“西哈二人组”。经此战役后，才让他们意识到他们所谓的赚钱多，都是建立在别人的保护伞之下的，曾经被调倘的“西哈二人组”也变成了“中国有西哈”，越来越多的学生投身工业领域，优质生源越来越多，仅仅过了几年就成为世界最好的top2大学，世界学术中心。</p>
+<p>    美国战败后，本土核辐射超标，幸存人员全部被转移到阿拉斯加地区，保留联合国五大常任理事国席位，剥夺了一票否决权。经济上一落千丈，军事上，也被限制为只能组建自卫军。</p>
+<p>    杨大伟从西北工业大学毕业后，主导建设了“千里眼”工程。通过在月球表面安装反射镜，以整个月球为载体，建成了世界上最大规模的射电望远镜，用于探索宇宙奥秘。因为“割月补地”计划需要用到“千里眼”，所以杨大伟也顺理成章被推举为总指挥。</p>
+<p> </p>
+<p>    “哔哔哔…..”</p>
+<p>    一声哨响，领队将航班上的所有人目光都集中在了他身上，扫视了一圈后对我们说：<br>“刚刚得到通知，“割月补地”计划执行细节已经全部确定，现在连线总指挥，由他向我们介绍任务，事关重要，请认真听清每一句话”</p>
+<p>    说完打开了全息会议系统，一个头发油亮黑眼圈厚重的人出现在屏幕中，看得出来他很疲惫，但也在强打着精神，不让我们看出他的疲态，这个人就是“割月补地”计划的总指挥杨大伟，曾经就是他带领着我们在月球上建设了“千里眼”工程。这时，杨大伟说话了：</p>
+<p>    “你们现在应该是很迷茫，不知道为什么就上了飞机，也不知道要去什么地方，去做什么。我现在可以告诉你们，我们要去做一件伟大的事，拯救全人类的事情，之前没有告诉你们，是因为我们的技术细节还没有完成，为了赶时间，先让你们搭乘飞机去往航天发射中心，现在技术细节已经确定完成，由我向大家介绍“割月补地”计划。每个小队的资料稍后将发送到你们领队手中…..”</p>
+<p>    半小时后，杨大伟讲述完了“割月补地”计划，其核心流程分为六步：</p>
+<ul>
+<li><p>通过调整“千里眼”的反射镜，让微波辐射在反射镜之间连续反射，最后形成一个锥形的反射链路，届时，整个月球将成为一个巨大的“微波相对论引擎”，通过调控微波出口可以获得任意方向的加速度。</p>
+</li>
+<li><p>通过“微波相对论引擎”使月球减速，慢慢靠近地球。</p>
+</li>
+<li><p>当月球到达地月洛希极限点时，依靠地球引力将月球“切割”成两部分。</p>
+</li>
+<li><p>“微波相对论引擎”将其中一部分月球主体加速推离地球，重新回到月球轨道。</p>
+</li>
+<li><p>另一部分月球在发动机作用下，下降到地面与青藏高原上的地球缺口对接。</p>
+</li>
+<li><p>岩浆从四周溢出并冷却，将地球与月球“焊接”在一起完成“割月补地”计划。</p>
+</li>
+</ul>
+<p>    我们所有人被分成了1000个小队，每个小队任务不相同，每个小队都由10名工程师带领300名军人完成指定任务，因为我曾经参与过“千里眼”工程的建设工作，所以被分配到维修组作为小队工程师之一。我们小队接到的任务是维修月球上亚平宁山脉附近受损的反射镜，确保每块反射镜都能正常控制。除了维修组以外，其他的三个小组则分别是负责炸出应力集中点的爆破组，负责“捆绑”月球的捆绑组，以及负责产生引擎驱动力的湮灭组。</p>
+<p>    看完资料后，飞机也正好到达了拜科努尔航天发射场，这里是世界第一座、也是规模最大的空间发射中心，第一颗人造地球卫星从这里发射入轨，航天员加加林也是在这里乘坐第一艘载人飞船东方号踏上了人类历史上第一次载人飞行的征程，这里有太多人类飞天的第一次。美国在中美大战战败后退缩阿拉斯加，经济与军事实力遭到重创，世界上就只有中国和俄罗斯有能力建设万吨级负载航天发射中心，而中国的海南航天发射中心在地震中被海啸摧毁，由于远离地震中心地带，拜科努尔航天发射场受损不严重，受损部分也很快修好，目前是地球上唯一的地月运载中心。曾经的它实现了人类航天的梦想，如今又要承担着地球的和人类的命运。</p>
+<p>    下了飞机后，我们马不停蹄登上了前往月球的飞船，经过五个小时的飞行顺利到达了月球。这时候的月球，表面大部分区域都覆盖上了一米长一米宽的反射镜，通过两米多高的万向球形节支撑在月球表面，方向可以任意调节，像极了地球上的光伏发电站。反射镜透光率与反射率也可以任意设置，当反射率设置为0%的时候，在地球上就不能看到月亮了，而当反射率设置为100%，就能看到一个如太阳般明亮的月球。当然，这么大的“千里眼”工程当然可不是用来供人们赏月的，而是用来研究宇宙。七年前，我们这些建设者无论如何也想象不到，他竟然还能通过控制每一片反射镜，变成一个“微波相对论引擎”，还能在地球保卫战中发挥如此重要的作用。</p>
+<p>    根据领取到的地图资料，我们前往有故障的反射镜处维修，由于反射镜数量众多，达到了惊人的35亿，所以坏掉的反射镜也不少，我们1000支队伍中有超过一半的队伍是做反射镜维修的，被分配到了不同的区域，覆盖整个月球。</p>
+<p>    正当我们紧张维修时，突然月球上传来一阵强烈的震动。不久前才在地球经历了大地震，尚且心有余悸，但我们都知道刚刚发生的不是地震，而是爆破组的队友在执行任务。</p>
+<p>    在整个“割月补地”计划当中，当月球到达地月洛希极限点时，依靠地球引力将月球“切割”成两部分，但是这个“切割”过程却不可控，很可能切出部分太大或者太小，那都将使我们的努力化为泡影。因此，爆破组的工作便是在月球上选出一个直径1500公里的圆圈，围着圆圈安装炸弹，通过爆破在月球上炸出一个直径1500公里的圆形裂谷，形成应力集中点，地球引力在撕破月球的时候就有了着力点，会顺着圆圈将月球切成两半，刚刚的地震便是连续爆破产生的震动。</p>
+<p>     爆炸发生后不久，我们就遇到了捆绑组的队员，他们驾驶着低空飞行器，向地面喷洒着一种“涂料”，实际上“涂料”是由夸克组成的粒子流，夸克被喷射到月球表面后相互之间通过强相互作用力连接，在月球表面形成两张由强相互作用力连接的网，两张网的边界就是爆破组炸出的直径1500公里的圆形大裂谷，一大一小分别包裹着月球的大小两部分，一方面防止地球引力撕破月球时变成小碎片，另一方面也将反射镜产生的推力分摊到月球表面，防止反射镜支架受力陷入地下。最后，轮到湮灭组上场了，他们的职责是将反物质微波发生器安装在月球表面，用以补偿宇宙微波辐射。“微波相对论引擎”的驱动力来自微波辐射，仅仅从宇宙中获取微波辐射不足以驱动月球，反物质微波发生器就是用来为引擎提供足够大的驱动力的，其原理是介子与其反粒子相遇会彼此湮灭，从而释放出微波辐射，由反射镜捕捉到这些微波辐射，进行定向反射，形成反推力。</p>
+<p>     经过两天时间的连续作业，我们完成了在月球上的所有准备工作，月球，即将启航。</p>
+<p>     月球控制中心接到指令，开始控制反射镜向“微波相对论引擎”模式变形，大量的微波辐射在每一块反射镜中进行中全反射，画出一个锥形轨迹，从一个矢量喷管射出，月球在反推力的作用下，开始减速并被地球引力吸引。</p>
+<p>    38万公里，30万公里，25万公里……</p>
+<p>    在地球引力的驱动下，月球离地球越来越近</p>
+<p>    经过二十天的漫长航行，终于距离地球只有1万公里。此时的地球上的人类，看见的月亮不再是小小的“白玉盘”，而是像是一座大山压在头顶，庞大的体积在上空压得人们喘不过气，让许多巨物恐惧症患者接近崩溃自杀，不安的气息也在人群中散播开来。事实上，不安的情绪早已存在，当我们登上月球的那一刻，地球上的人群便开始向玻利维亚高原聚集。</p>
+<p>    当月球快速与地球靠近的同时，潮汐力也在不断变化，巨大的潮汐力在地球上掀起了几百米高的巨浪，淹没了地球上一半的城市，科学家也计算出了这样的结果，早已将幸存人类向玻利维亚高原聚集。虽然地球的航天发射中心在之前大地震中几乎被被摧毁殆尽，但是地面低空交通运输受到的影响却不大，甚至有人在地震发生时开着私人飞机到空中避难，所以目前除了玻利维亚高原，地球上的其他地方早已没有了人类的踪影。</p>
+<p>    哪里有人群聚集哪里就会有骚乱，半个多月以来，玻利维亚高原上争夺帐篷、食物和水等引发的骚乱时有发生，甚至有人觉得食物分配不均开始带头抢夺政府驻地资源，残害同胞夺取资源。</p>
+<p>    暂且搁下人群不管，当下最重要的还是月球，目前月球已经处在洛希极限点附近，开始以很慢的速度向地球靠近，终于，在距离地球9000公里的地方，月球开始裂开了，和计划中的一样，月球从直径1500公里的大裂谷开始一点点裂开，部分残渣开始脱离月球表面，落入地球形成流星雨。经过漫长的半小时，月球被地球切割成两块，还没有结束，“微波相对论引擎”开始反向加速了，马力全开，将缺了一部分的月球主体加速推离了地球，越飞越远，我们负责在月球上执行任务的人，也跟着越飞越远，而另一部分则将留在地球上。在推离月球主体的时候，从月球上分离出的部分小月球早已调整好反射镜朝向，形成一个小的“微波相对论引擎”，开始向地面下落，最终又经过半天时间的漫长等待，在破碎的地壳完全沉入地幔之前，小月球稳稳落在青藏高原的缺口之上，圆弧状的月球表面嵌入到了缺口之中，四周向上翘起，顶部则是一个面积达到176万平方公里大平原，就像给地球盖上了锅盖，十分滑稽。地球上的人开始狂欢，地球保卫计划成功了。</p>
+<p>    一切都太顺利了，顺利得让人不安。</p>
+<p>    仅仅过了一天，出事儿了，地壳又被压塌了。</p>
+<p>    月球的巨大重量，再次将脆弱的地壳压破，慢慢向地幔中沉去，一切又回到了原点，甚至更为糟糕，现在的地球，已经彻底失去了航天发射的能力。</p>
+<p>    不知道联合国的强权，又会想出什么样的办法来。</p>
+<p>    为什么就没有人提前想到，原本就破裂的地壳，怎么会承受的住比原先破裂前更重的月球呢。</p>
+<p>    而在留在月球本体上的三十多万人，又将驾驶月球去往哪里？</p>
+<p>    回到原来的月球轨道？</p>
+<p>    寻找新的家园？</p>
+<p>    还是，回到地球？</p>
+]]></content>
+      <categories>
+        <category>微小说</category>
+      </categories>
+      <tags>
+        <tag>个人博客</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>眼睛干涩疲劳、细菌感染用药</title>
+    <url>/2022/01/16/%E7%9C%BC%E7%9D%9B%E5%B9%B2%E6%B6%A9%E7%96%B2%E5%8A%B3%E3%80%81%E7%BB%86%E8%8F%8C%E6%84%9F%E6%9F%93%E7%94%A8%E8%8D%AF/</url>
+    <content><![CDATA[<p>注意用眼</p>
+<img src="/2022/01/16/%E7%9C%BC%E7%9D%9B%E5%B9%B2%E6%B6%A9%E7%96%B2%E5%8A%B3%E3%80%81%E7%BB%86%E8%8F%8C%E6%84%9F%E6%9F%93%E7%94%A8%E8%8D%AF/image.jpg" alt="img" style="zoom:30%;"> ]]></content>
+      <tags>
+        <tag>个人博客</tag>
+      </tags>
+  </entry>
+</search>
