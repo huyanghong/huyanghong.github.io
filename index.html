@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#222">
 <meta name="generator" content="Hexo 5.4.0">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon_limit.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon_limit.ico">
   <link rel="mask-icon" href="/images/logo.svg" color="#222">
   <link rel="manifest" href="/images/manifest.json">
 
@@ -190,6 +190,100 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://huyanghong.com/2022/03/22/FOC%E6%8E%A7%E5%88%B6%E5%99%A8%E7%94%B5%E8%B7%AF%E5%92%8C%E4%BB%A3%E7%A0%81%E8%A7%A3%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/child.jpg">
+      <meta itemprop="name" content="鱼香ROS">
+      <meta itemprop="description" content="毒鸡汤位置招租">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="鱼香ROS">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/03/22/FOC%E6%8E%A7%E5%88%B6%E5%99%A8%E7%94%B5%E8%B7%AF%E5%92%8C%E4%BB%A3%E7%A0%81%E8%A7%A3%E6%9E%90/" class="post-title-link" itemprop="url">FOC控制器电路和代码解析</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FOC-%E7%94%B5%E6%9C%BA%E6%8E%A7%E5%88%B6/" itemprop="url" rel="index"><span itemprop="name">FOC 电机控制</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/03/22/FOC%E6%8E%A7%E5%88%B6%E5%99%A8%E7%94%B5%E8%B7%AF%E5%92%8C%E4%BB%A3%E7%A0%81%E8%A7%A3%E6%9E%90/" class="post-meta-item leancloud_visitors" data-flag-title="FOC控制器电路和代码解析" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2022/03/22/FOC%E6%8E%A7%E5%88%B6%E5%99%A8%E7%94%B5%E8%B7%AF%E5%92%8C%E4%BB%A3%E7%A0%81%E8%A7%A3%E6%9E%90/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/03/22/FOC%E6%8E%A7%E5%88%B6%E5%99%A8%E7%94%B5%E8%B7%AF%E5%92%8C%E4%BB%A3%E7%A0%81%E8%A7%A3%E6%9E%90/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>5.6k</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="什么是FOC"><a href="#什么是FOC" class="headerlink" title="什么是FOC"></a>什么是FOC</h1><p>FOC(Field Oriented Control)即磁场定向控制技术，又称为矢量控制(Vector Control)，是目前无刷直流电机(BLDC)和永磁同步电机(PMSM)高效控制的最佳选择。使用FOC技术可以精确地控制磁场大小与方向，使得电机转矩平稳、噪声小、效率高，并且具有高速的动态响应。FOC可以分为有感FOC和无感FOC，无感FOC相较于有感FOC，少了编码器反馈电机转子的位置信息，所以在控制中需要通过采集电机相电流，使用位置估计算法来计算转子位置，控制难度较大，下文默认FOC仅代表有感FOC。<br>FOC的本质是将三项无刷电机解耦成类似直流有刷电机的控制方法，简化电机控制。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/03/22/FOC%E6%8E%A7%E5%88%B6%E5%99%A8%E7%94%B5%E8%B7%AF%E5%92%8C%E4%BB%A3%E7%A0%81%E8%A7%A3%E6%9E%90/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1002,100 +1096,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://huyanghong.com/2021/05/16/ubuntu%E7%8E%AF%E5%A2%83%E4%B8%8B%E5%AE%89%E8%A3%85%E5%8F%8A%E9%83%A8%E7%BD%B2hexo/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/child.jpg">
-      <meta itemprop="name" content="鱼香ROS">
-      <meta itemprop="description" content="毒鸡汤位置招租">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="鱼香ROS">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/05/16/ubuntu%E7%8E%AF%E5%A2%83%E4%B8%8B%E5%AE%89%E8%A3%85%E5%8F%8A%E9%83%A8%E7%BD%B2hexo/" class="post-title-link" itemprop="url">ubuntu环境下安装及部署hexo</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/hexo/" itemprop="url" rel="index"><span itemprop="name">hexo</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2021/05/16/ubuntu%E7%8E%AF%E5%A2%83%E4%B8%8B%E5%AE%89%E8%A3%85%E5%8F%8A%E9%83%A8%E7%BD%B2hexo/" class="post-meta-item leancloud_visitors" data-flag-title="ubuntu环境下安装及部署hexo" title="阅读次数">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">阅读次数：</span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine：</span>
-    
-    <a title="valine" href="/2021/05/16/ubuntu%E7%8E%AF%E5%A2%83%E4%B8%8B%E5%AE%89%E8%A3%85%E5%8F%8A%E9%83%A8%E7%BD%B2hexo/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2021/05/16/ubuntu%E7%8E%AF%E5%A2%83%E4%B8%8B%E5%AE%89%E8%A3%85%E5%8F%8A%E9%83%A8%E7%BD%B2hexo/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>1.2k</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>在ubuntu环境下安装hexo及及其依赖，并部署到github上，将个人域名解析到博客仓库</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/05/16/ubuntu%E7%8E%AF%E5%A2%83%E4%B8%8B%E5%AE%89%E8%A3%85%E5%8F%8A%E9%83%A8%E7%BD%B2hexo/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1172,14 +1172,14 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-count">13</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">7</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
