@@ -798,4 +798,40 @@
         <tag>个人博客</tag>
       </tags>
   </entry>
+  <entry>
+    <title>ESP32使用HSPI读取磁编AS5048A</title>
+    <url>/2022/04/30/ESP32%E4%BD%BF%E7%94%A8HSPI%E8%AF%BB%E5%8F%96%E7%A3%81%E7%BC%96AS5048A/</url>
+    <content><![CDATA[<p>最近规划了一批要做的项目，有几个都需要用到步进电机，所以准备设计一款串联式闭环步进电机驱动器。</p>
+<p>由于STM32价格飞涨，买二手拆机芯片都已经很贵了，所以未来一段时间如果不是必须使用stm32的情况下，都是暂时使用ESP32来代替，性能差不多的情况下价格低了一个数量级，完美的平替产品。</p>
+<p>今天用esp32-cam模组验证了一下磁编传感器的通信，也遇到了些问题，这里记录一下。</p>
+<span id="more"></span>
+
+<h1 id="ESP32-SPI介绍"><a href="#ESP32-SPI介绍" class="headerlink" title="ESP32 SPI介绍"></a>ESP32 SPI介绍</h1><ul>
+<li>ESP32有四个SPI外设，分别为SPI0、SPI1、HSPI和VSPI。</li>
+<li>SPI0是专用于Flash的缓存，ESP32将连接的SPI Flash设备映射到内存中。</li>
+<li>SPI1和SPI0 使用相同的硬件线，SPI1用于写入flash芯片。</li>
+<li>HSPI和VSPI可以任意使用。</li>
+</ul>
+<h1 id="VSPI和HSPI的接口及引脚"><a href="#VSPI和HSPI的接口及引脚" class="headerlink" title="VSPI和HSPI的接口及引脚"></a>VSPI和HSPI的接口及引脚</h1><p>VSPI和HSPI的默认引脚<br>| SPI    | MOSI    | MOSI     |  SCLK    | SS     |<br>| :—   |  :—-: |  :—-:  |  :—-:  |   —: |<br>| VSPI   | 23      | 19       | 18       | 5      |<br>| HSPI   | 13      | 12       | 14       | 15     |</p>
+<p><strong>如果使用IO_MUX映射到其他引脚，会降低速率，默认引脚支持80M，映射后最高40M</strong></p>
+<h1 id="SPI基本函数"><a href="#SPI基本函数" class="headerlink" title="SPI基本函数"></a>SPI基本函数</h1><p>初始化</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">SPI.begin();</span><br><span class="line">SPI.begin(HSPI_SCLK, HSPI_MISO, HSPI_MOSI, HSPI_SS);</span><br></pre></td></tr></table></figure>
+<p>传输方式</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">SPI.setBitOrder(MSBFIRST);</span><br></pre></td></tr></table></figure>
+<p>设置频率</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">SPI.setFrequency(1000000);</span><br></pre></td></tr></table></figure>
+<p>设置时钟模式</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">SPI.setDataMode(SPI_MODE0);</span><br></pre></td></tr></table></figure>
+<p>接收/发送函数</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">byte ret = SPI.transfer(0x00);</span><br><span class="line">word ret = SPI.transfer16(0x0000);</span><br><span class="line">int  ret = SPI.transfer32(0x00000000);</span><br></pre></td></tr></table></figure>
+
+<h1 id="使用HSPI读AS5048A程序"><a href="#使用HSPI读AS5048A程序" class="headerlink" title="使用HSPI读AS5048A程序"></a>使用HSPI读AS5048A程序</h1><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">#include &lt;SPI.h&gt;</span><br><span class="line"></span><br><span class="line">#define HSPI_MISO   12</span><br><span class="line">#define HSPI_MOSI   13</span><br><span class="line">#define HSPI_SCLK   14</span><br><span class="line">#define HSPI_SS     15</span><br><span class="line"></span><br><span class="line">static const int spiClk = 10000000; </span><br><span class="line">SPIClass *hspi = NULL;</span><br><span class="line"></span><br><span class="line">void setup() &#123;</span><br><span class="line">  Serial.begin(115200);</span><br><span class="line">  hspi = new SPIClass(HSPI);</span><br><span class="line"></span><br><span class="line">  //hspi-&gt;begin();</span><br><span class="line">  hspi-&gt;begin(HSPI_SCLK, HSPI_MISO, HSPI_MOSI, HSPI_SS); //SCLK, MISO, MOSI, SS</span><br><span class="line">  pinMode(HSPI_SS, OUTPUT); //HSPI SS</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void loop() &#123;</span><br><span class="line">    delay(20);</span><br><span class="line"></span><br><span class="line">    word angle_register = 0x3fff | 0x8000;</span><br><span class="line">    hspi-&gt;beginTransaction(SPISettings(spiClk, MSBFIRST, SPI_MODE1));</span><br><span class="line">    digitalWrite(HSPI_SS, LOW);</span><br><span class="line">    word ret = hspi-&gt;transfer16(angle_register);</span><br><span class="line">    digitalWrite(HSPI_SS, HIGH);</span><br><span class="line">    delayMicroseconds(50);</span><br><span class="line">    digitalWrite(HSPI_SS, LOW);</span><br><span class="line">    ret = hspi-&gt;transfer16(angle_register);</span><br><span class="line">    digitalWrite(HSPI_SS, HIGH);</span><br><span class="line">    hspi-&gt;endTransaction();</span><br><span class="line"></span><br><span class="line">    ret = ret &amp; 0x3fff;</span><br><span class="line">    float ang = (float)(ret) / 16384.0f * 360.0f;</span><br><span class="line">    Serial.println(ang);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+]]></content>
+      <categories>
+        <category>ESP32</category>
+      </categories>
+      <tags>
+        <tag>个人博客</tag>
+      </tags>
+  </entry>
 </search>
